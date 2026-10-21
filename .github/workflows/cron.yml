@@ -1,0 +1,39 @@
+name: Scheduled sync
+
+# Calls the app's scheduled-job endpoint. This is one of three interchangeable ways to schedule
+# it (see docs/DEPLOYMENT.md): this workflow, Vercel Cron (daily only on the Hobby plan), or
+# Supabase pg_cron (supabase/optional/pg_cron_schedule.sql). Use ONE of them.
+#
+# GitHub runs scheduled workflows on a best-effort basis: the shortest interval is 5 minutes and
+# runs are often delayed under load, which is fine for result sync (the app expects Chess.com
+# data to lag anyway). Scheduled workflows only run on the default branch.
+#
+# Required repository secrets:  APP_URL (https://your-site, no trailing slash)   CRON_SECRET
+
+on:
+  schedule:
+    - cron: "*/10 * * * *"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  run-all:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      APP_URL: ${{ secrets.APP_URL }}
+      CRON_SECRET: ${{ secrets.CRON_SECRET }}
+    steps:
+      - name: Call /api/cron/run-all
+        run: |
+          if [ -z "$APP_URL" ] || [ -z "$CRON_SECRET" ]; then
+            echo "APP_URL and CRON_SECRET are not set as repository secrets; nothing to do."
+            exit 0
+          fi
+          status=$(curl -sS -o response.json -w '%{http_code}' --max-time 90 \
+            -X POST -H "Authorization: Bearer ${CRON_SECRET}" "${APP_URL}/api/cron/run-all")
+          echo "HTTP ${status}"
+          # The response contains counts only (no secrets or personal data).
+          cat response.json; echo
+          [ "$status" = "200" ]

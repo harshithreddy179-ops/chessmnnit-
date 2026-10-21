@@ -1,0 +1,54 @@
+# Supabase CLI configuration for LOCAL development (`supabase start`).
+# The hosted project is configured in the dashboard instead (docs/DEPLOYMENT.md).
+# Written from the CLI's documented configuration reference; it has not been run against the
+# CLI in this repository's CI, so treat `supabase start` as the first thing to verify.
+
+project_id = "mnnit-chess"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 17
+
+[db.seed]
+# The demo seed is LOCAL ONLY and has not been run against the real Supabase auth schema, so it
+# is off by default. Load it deliberately with:  psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -f supabase/seed.sql
+enabled = false
+sql_paths = ["./seed.sql"]
+
+[realtime]
+enabled = true
+
+[studio]
+enabled = true
+port = 54323
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000/auth/callback", "http://127.0.0.1:3000/auth/callback"]
+jwt_expiry = 3600
+enable_refresh_token_rotation = true
+refresh_token_reuse_interval = 10
+enable_signup = true
+enable_anonymous_sign_ins = false
+
+# Sign-in is Google only. Email/password is switched off so the verified Google email is the
+# only identity the eligibility check ever sees.
+[auth.email]
+enable_signup = false
+enable_confirmations = true
+
+# Create the OAuth client in Google Cloud Console and export these before `supabase start`
+# (docs/DEPLOYMENT.md, "Google OAuth"). `skip_nonce_check` is required for local sign-in.
+[auth.external.google]
+enabled = true
+client_id = "env(GOOGLE_CLIENT_ID)"
+secret = "env(GOOGLE_CLIENT_SECRET)"
+skip_nonce_check = true

@@ -1,4 +1,4 @@
-import { test, expect, resetMembers } from "./fixtures";
+import { test, expect, resetMembers, appUrl } from "./fixtures";
 
 /**
  * Public pages rendered by the real Next.js app from real database rows (through the
@@ -142,6 +142,37 @@ test.describe("public pages with real data", () => {
     await expect(page.getByRole("row")).toHaveCount(4); // header + 3
     await page.goto("/matches?player=pub_chirag&outcome=draw");
     await expect(page.getByRole("row", { name: /Alice Anand/ })).toContainText("½–½");
+  });
+
+  test("privacy page, robots and sitemap are published; the sitemap lists only public profiles", async ({
+    page,
+    request,
+    db,
+  }) => {
+    await page.goto("/privacy");
+    await expect(page.getByRole("heading", { name: "Privacy", level: 1 })).toBeVisible();
+    await expect(
+      page.getByText(
+        /never asks? for your Chess\.com password|never ask for your Chess\.com password/,
+      ),
+    ).toBeVisible();
+
+    const robots = await (await request.get(`${appUrl}/robots.txt`)).text();
+    expect(robots).toContain("Disallow: /admin");
+    expect(robots).toContain("Disallow: /api/");
+    expect(robots).toMatch(/Sitemap: http:\/\/localhost:3101\/sitemap\.xml/);
+
+    // An unlisted (not yet approved) member must not leak into the sitemap.
+    const hidden = await db.createUser({ name: "Hidden Hana" });
+    await db.admin.query("update public.profiles set display_name = 'Hidden Hana' where id = $1", [
+      hidden.id,
+    ]);
+    const res = await request.get(`${appUrl}/sitemap.xml`);
+    expect(res.status()).toBe(200);
+    const xml = await res.text();
+    expect(xml).toContain("/players/pub_alice");
+    expect(xml).toContain("/leaderboards");
+    expect(xml).not.toContain("Hidden");
   });
 
   test("rules page publishes the live scoring settings", async ({ page }) => {

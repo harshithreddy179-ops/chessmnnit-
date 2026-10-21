@@ -29,6 +29,9 @@ export function SiteFooter() {
           <Link className="text-muted-foreground hover:text-foreground" href="/rules">
             Scoring &amp; rules
           </Link>
+          <Link className="text-muted-foreground hover:text-foreground" href="/privacy">
+            Privacy
+          </Link>
           <Link className="text-muted-foreground hover:text-foreground" href="/login">
             Sign in
           </Link>
