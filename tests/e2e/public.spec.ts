@@ -131,7 +131,7 @@ test.describe("public pages with real data", () => {
     await expect(page.locator("tbody tr").first()).toContainText("Alice Anand");
     await expect(page.locator("tbody tr").first()).toContainText("7"); // 2 wins + 1 draw = 7 points
     await page.goto("/leaderboards?board=chesscom_rating&category=blitz");
-    await expect(page.getByText("Nobody is ranked here yet")).toBeVisible(); // categories are never merged
+    await expect(page.getByText("Nobody is ranked here yet").first()).toBeVisible(); // categories are never merged
     await page.goto("/leaderboards?board=win_rate");
     await expect(page.getByRole("heading", { name: "Win rate" })).toBeVisible();
     await expect(page.getByText(/at least 5 games/)).toBeVisible();

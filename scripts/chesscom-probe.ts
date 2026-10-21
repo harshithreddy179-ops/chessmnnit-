@@ -135,13 +135,27 @@ async function main() {
     const games = archive.data?.games ?? [];
     let normalised = 0;
     const problems = new Map<string, number>();
+    const unmapped: string[] = [];
     for (const g of games) {
       const r = normalizeArchiveGame(g, month);
-      if (r.game) normalised++;
-      else {
+      if (r.game) {
+        normalised++;
+        // A finished game whose result codes we cannot map would be sent to a moderator, not counted.
+        if (r.game.winner === "unknown")
+          unmapped.push(`${r.game.white_result}/${r.game.black_result}`);
+      } else {
         const why = r.skipped ?? "unknown";
         problems.set(why, (problems.get(why) ?? 0) + 1);
       }
+    }
+    if (unmapped.length) {
+      record(
+        "every game's result codes are recognised",
+        false,
+        `unmapped white/black codes: ${[...new Set(unmapped)].join(", ")}. Add them to src/lib/chess/games.ts (win / loss / draw code lists).`,
+      );
+    } else if (normalised > 0) {
+      record("every game's result codes are recognised", true, `${normalised} games mapped`);
     }
     record(
       `archive ${month} normalises`,

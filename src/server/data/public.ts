@@ -96,6 +96,29 @@ export const getLandingData = unstable_cache(fetchLanding, ["landing-v1"], {
   tags: ["public-data"],
 });
 
+const MAX_SITEMAP_PLAYERS = 5000;
+
+async function fetchSitemapPlayers(): Promise<string[]> {
+  const db = createSupabasePublicClient();
+  if (!db) return [];
+  // The read policy only exposes approved members, so this is exactly the public set.
+  const { data } = await db
+    .from("chess_account_links")
+    .select("chess_username")
+    .order("chess_username")
+    .limit(MAX_SITEMAP_PLAYERS);
+  return (data ?? []).map((r) => r.chess_username);
+}
+
+/** Usernames of public profiles, cached like the landing data so crawlers cannot hammer the database. */
+export const getSitemapPlayers = unstable_cache(fetchSitemapPlayers, ["sitemap-players-v1"], {
+  revalidate: Math.max(
+    1,
+    Number.parseInt(process.env.PUBLIC_DATA_REVALIDATE_SECONDS ?? "60", 10) || 60,
+  ),
+  tags: ["public-data"],
+});
+
 export interface PageParams {
   page: number;
   pageSize: number;
