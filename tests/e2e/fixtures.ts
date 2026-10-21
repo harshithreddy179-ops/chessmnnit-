@@ -35,7 +35,8 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       await use(chess);
       await chess.close();
     },
-    { scope: "worker" },
+    // Always running: the app is configured to use it, and an absent server would look like "Chess.com unreachable".
+    { scope: "worker", auto: true },
   ],
 
   // eslint-disable-next-line no-empty-pattern
