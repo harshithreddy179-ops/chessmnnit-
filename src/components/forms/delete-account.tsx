@@ -39,7 +39,7 @@ export function DeleteAccount() {
           <DialogHeader>
             <DialogTitle>Delete your account?</DialogTitle>
             <DialogDescription>
-              This permanently removes your profile, Chess.com link, ratings, challenges and notifications. Match results you played stay in your opponents’ history, but without your identity. This can’t be undone.
+              This permanently removes your profile, Chess.com link, ratings, challenges and notifications. Verified match results stay in your opponents’ history and statistics: those records keep your Chess.com username and the link to the public game, but no longer point to any member profile, name or email. This can’t be undone.
             </DialogDescription>
           </DialogHeader>
           <Field id={`${id}-c`} label="Type DELETE to confirm" required>

@@ -15,6 +15,11 @@ export function AllowlistForm({ canAddDomains }: { canAddDomains: boolean }) {
   const [values, setValues] = useState("");
   const [note, setNote] = useState("");
   const { run, busy, error } = useAction();
+  // One bad line rejects the whole batch (so nothing is half-added); say exactly which lines.
+  const problems = error?.fields.filter((f) => f.path === "values" || f.path.startsWith("values.")).map((f) => f.message) ?? [];
+  const valuesError = problems.length
+    ? `${problems.slice(0, 5).join("; ")}${problems.length > 5 ? `; and ${problems.length - 5} more` : ""}. Nothing was added.`
+    : undefined;
   return (
     <form
       className="grid gap-4"
@@ -33,7 +38,7 @@ export function AllowlistForm({ canAddDomains }: { canAddDomains: boolean }) {
           </NativeSelect>
         )}
       </Field>
-      <Field id={`${id}-v`} label={kind === "email" ? "Emails (paste a list: one per line, or separated by commas)" : "Domain"} hint={kind === "domain" ? "Anyone with a verified Google account on this domain becomes eligible. Only add a domain the institute controls." : "Up to 1000 at a time."} error={error?.fieldError("values")} required>
+      <Field id={`${id}-v`} label={kind === "email" ? "Emails (paste a list: one per line, or separated by commas)" : "Domain"} hint={kind === "domain" ? "Anyone with a verified Google account on this domain becomes eligible. Only add a domain the institute controls." : "Up to 1000 at a time."} error={valuesError} required>
         {(a) => <Textarea {...a} value={values} onChange={(e) => setValues(e.target.value)} rows={kind === "email" ? 6 : 2} required />}
       </Field>
       <Field id={`${id}-n`} label="Note (optional)" error={error?.fieldError("note")}>

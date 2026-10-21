@@ -12,6 +12,9 @@ import { chessProfileUrl } from "@/lib/chess/username";
 import type { ProviderStatus } from "@/lib/chess/verification/types";
 import { formatDateTime, formatRelative } from "@/lib/utils";
 
+/** Failures that close the claim: the page re-renders without it, so the explanation must live outside the claim panel. */
+const CLOSES_CLAIM = new Set(["chess_account_already_linked", "user_already_linked", "claim_expired", "claim_not_open"]);
+
 export interface ClaimView {
   status: "pending" | "needs_review";
   chess_username: string;
@@ -80,8 +83,9 @@ export function ChessVerification({ claim, eligible, providers }: { claim: Claim
               loading={busy === "check"}
               onClick={async () => {
                 setResult(null);
-                const r = await run<{ verified: boolean; message?: string }>("check", "/api/chess/claim/check", { success: undefined });
+                const r = await run<{ verified: boolean; reason?: string; message?: string }>("check", "/api/chess/claim/check", { success: undefined });
                 if (r?.verified) toast.success("Chess.com account verified");
+                else if (r && r.reason && CLOSES_CLAIM.has(r.reason)) toast.error(r.message ?? "Verification did not succeed.", { duration: 20_000 });
                 else if (r) setResult(r.message ?? "Not verified yet.");
               }}
             >

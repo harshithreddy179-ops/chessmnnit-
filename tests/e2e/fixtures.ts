@@ -82,4 +82,13 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   },
 });
 
+/**
+ * Empties every member-related table (users, profiles, links, games, challenges, matches, statistics).
+ * Settings, the audit log and the eligibility list are kept. For specs whose assertions concern the
+ * whole site (landing counts, directory, leaderboards) and so must not see other specs' members.
+ */
+export async function resetMembers(db: TestDb): Promise<void> {
+  await db.admin.query("truncate table auth.users, public.imported_chess_games, public.chess_archive_state, app_private.rate_limit_buckets cascade");
+}
+
 export { expect, appUrl };

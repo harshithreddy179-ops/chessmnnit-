@@ -59,7 +59,8 @@ const RESULT: Record<string, [string, string]> = {
   draw: ["agreed", "agreed"],
 };
 
-let counter = 5_000_000;
+// Game numbers must stay unique even when a test worker restarts and loads this module again.
+let counter = Date.now();
 
 export async function startFakeChessCom(port = 0): Promise<FakeChessCom> {
   const profiles = new Map<string, FakeProfile>();

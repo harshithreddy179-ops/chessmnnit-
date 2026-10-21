@@ -14,12 +14,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const ctx = await requireAdmin();
   const overview = await getOverview(ctx.supabase).catch(() => null);
   const q = overview?.queues;
+  // Mirrors each page's own gate (which redirects), so nobody is offered a link that bounces them back.
   const items: AdminNavItem[] = [
     { href: "/admin", label: "Overview" },
     { href: "/admin/users", label: "Users" },
-    { href: "/admin/verifications", label: "Verifications", count: q ? q.claims_needing_review + q.eligibility_requests + q.recovery_requests : 0 },
-    { href: "/admin/eligibility", label: "Eligibility list" },
-    { href: "/admin/matches", label: "Matches", count: q ? q.challenges_needing_review + q.open_disputes : 0 },
+    ...(can(ctx.roles, ["verification_admin"])
+      ? [{ href: "/admin/verifications", label: "Verifications", count: q ? q.claims_needing_review + q.eligibility_requests + q.recovery_requests : 0 }]
+      : []),
+    ...(can(ctx.roles, ["verification_admin"]) ? [{ href: "/admin/eligibility", label: "Eligibility list" }] : []),
+    ...(can(ctx.roles, ["match_moderator"]) ? [{ href: "/admin/matches", label: "Matches", count: q ? q.challenges_needing_review + q.open_disputes : 0 }] : []),
     { href: "/admin/sync", label: "Sync & jobs" },
     { href: "/admin/audit", label: "Audit log" },
     ...(can(ctx.roles, []) ? [{ href: "/admin/roles", label: "Admins" }, { href: "/admin/settings", label: "Settings" }] : []),

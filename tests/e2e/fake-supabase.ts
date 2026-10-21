@@ -81,6 +81,13 @@ const err = (status: number, code: string, message: string, details: string | nu
 export async function startFakeSupabase(opts: FakeSupabaseOptions) {
   const { pool } = opts;
   const tableCols = new Map<string, Map<string, string>>(); // table -> column -> data_type
+
+  // node-pg cannot parse arrays of user-defined enums (it returns the raw "{a,b}" text), whereas
+  // PostgREST returns proper JSON arrays. Enum labels in this schema are plain identifiers.
+  const enumArrays = await pool.query("select t.oid::int as oid from pg_type t join pg_type e on e.oid = t.typelem where t.typcategory = 'A' and e.typtype = 'e'");
+  for (const { oid } of enumArrays.rows as { oid: number }[]) {
+    types.setTypeParser(oid, (v: string) => (v === "{}" ? [] : v.slice(1, -1).split(",")));
+  }
   const fns = new Map<string, FnMeta>();
 
   const cols = await pool.query(

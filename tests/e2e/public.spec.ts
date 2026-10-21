@@ -1,4 +1,4 @@
-import { test, expect } from "./fixtures";
+import { test, expect, resetMembers } from "./fixtures";
 
 /**
  * Public pages rendered by the real Next.js app from real database rows (through the
@@ -6,6 +6,8 @@ import { test, expect } from "./fixtures";
  */
 test.describe("public pages with real data", () => {
   test.beforeAll(async ({ db, player }) => {
+    // These assertions describe the whole site, so start from an empty community (also makes a worker restart harmless).
+    await resetMembers(db);
     const a = await player({ username: "pub_alice", name: "Alice Anand", rapid: 1810 });
     const b = await player({ username: "pub_bhavna", name: "Bhavna Bose", rapid: 1650 });
     const c = await player({ username: "pub_chirag", name: "Chirag Chopra", rapid: 1400 });

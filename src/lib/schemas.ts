@@ -71,6 +71,11 @@ export const deleteAccountSchema = z.object({ confirm: z.literal("DELETE") });
 
 const reason = text(5, 500, "Reason");
 
+// The same shapes the database enforces on student_eligibility, so a bad line in a pasted list
+// is reported by name here instead of failing the whole batch with a generic message.
+const EMAIL_SHAPE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+const DOMAIN_SHAPE = /^[a-z0-9.-]+\.[a-z]{2,}$/;
+
 /** Every administrator action, validated in one place. The database enforces who may perform it. */
 export const adminActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("review_claim"), claim_id: uuid, approve: z.boolean(), reason }),
@@ -81,6 +86,13 @@ export const adminActionSchema = z.discriminatedUnion("action", [
     kind: z.enum(["email", "domain"]),
     values: z.array(z.string().trim().toLowerCase().min(3).max(254)).min(1).max(1000),
     note: z.string().transform(clean).pipe(z.string().max(200)).optional(),
+  }).superRefine((v, ctx) => {
+    const shape = v.kind === "email" ? EMAIL_SHAPE : DOMAIN_SHAPE;
+    v.values.forEach((value, index) => {
+      if (!shape.test(value)) {
+        ctx.addIssue({ code: "custom", path: ["values", index], message: `“${value.slice(0, 60)}” is not a valid ${v.kind === "email" ? "email address" : "domain"}` });
+      }
+    });
   }),
   z.object({ action: z.literal("remove_eligibility"), id: uuid, reason }),
   z.object({ action: z.literal("set_user_eligibility"), user_id: uuid, status: z.enum(["verified", "revoked", "unverified"]), reason }),
