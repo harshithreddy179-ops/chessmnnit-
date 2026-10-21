@@ -12,10 +12,12 @@ afterAll(async () => {
 });
 
 async function startClaim(userId: string, username: string) {
-  const r = await db.as(userId).query<{ id: string; verification_code: string; chess_username: string }>(
-    "select * from public.start_chess_claim($1)",
-    [username],
-  );
+  const r = await db
+    .as(userId)
+    .query<{ id: string; verification_code: string; chess_username: string }>(
+      "select * from public.start_chess_claim($1)",
+      [username],
+    );
   return r.rows[0]!;
 }
 
@@ -38,15 +40,24 @@ describe("onboarding produces an honest, approved public player", () => {
   it("tracks the four statuses independently", async () => {
     const u = await db.createUser({ name: "Asha Verma" });
     const profile = async () =>
-      (await db.admin.query("select eligibility_status, onboarding_completed_at, is_approved from public.profiles where id = $1", [u.id])).rows[0];
+      (
+        await db.admin.query(
+          "select eligibility_status, onboarding_completed_at, is_approved from public.profiles where id = $1",
+          [u.id],
+        )
+      ).rows[0];
 
     expect(await profile()).toMatchObject({ eligibility_status: "unverified", is_approved: false });
 
     // Not on the allowlist -> eligibility stays unverified.
-    expect((await db.as(u.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe("unverified");
+    expect((await db.as(u.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe(
+      "unverified",
+    );
 
     await db.allowEmail(u.email);
-    expect((await db.as(u.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe("verified");
+    expect((await db.as(u.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe(
+      "verified",
+    );
     expect(await profile()).toMatchObject({ eligibility_status: "verified", is_approved: false });
 
     const claim = await startClaim(u.id, "AshaV_Chess");
@@ -70,7 +81,9 @@ describe("onboarding produces an honest, approved public player", () => {
 
   it("does not use the email local-part as the default display name", async () => {
     const u = await db.createUser({ email: "secret.roll.2023ca99@example.test" });
-    const row = (await db.admin.query("select display_name from public.profiles where id = $1", [u.id])).rows[0];
+    const row = (
+      await db.admin.query("select display_name from public.profiles where id = $1", [u.id])
+    ).rows[0];
     expect(row.display_name).toBe("New player");
   });
 });
@@ -79,31 +92,47 @@ describe("student eligibility allowlist", () => {
   it("requires a confirmed Google email", async () => {
     const u = await db.createUser({ confirmed: false });
     await db.allowEmail(u.email);
-    expect((await db.as(u.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe("unverified");
+    expect((await db.as(u.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe(
+      "unverified",
+    );
   });
 
   it("supports admin-managed domain rules, and revoked entries stop matching", async () => {
     const u = await db.createUser({ email: "someone@campus.example.test" });
-    expect((await db.as(u.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe("unverified");
+    expect((await db.as(u.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe(
+      "unverified",
+    );
 
-    await db.admin.query("insert into public.student_eligibility (kind, value) values ('domain', 'campus.example.test')");
-    expect((await db.as(u.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe("verified");
+    await db.admin.query(
+      "insert into public.student_eligibility (kind, value) values ('domain', 'campus.example.test')",
+    );
+    expect((await db.as(u.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe(
+      "verified",
+    );
 
     const v = await db.createUser({ email: "other@revoked.example.test" });
-    await db.admin.query("insert into public.student_eligibility (kind, value, revoked_at) values ('domain', 'revoked.example.test', now())");
-    expect((await db.as(v.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe("unverified");
+    await db.admin.query(
+      "insert into public.student_eligibility (kind, value, revoked_at) values ('domain', 'revoked.example.test', now())",
+    );
+    expect((await db.as(v.id).query("select public.claim_eligibility() as s")).rows[0].s).toBe(
+      "unverified",
+    );
   });
 
   it("blocks Chess.com claims until eligibility is verified", async () => {
     const u = await db.createUser();
-    const err = await sqlError(db.as(u.id).query("select * from public.start_chess_claim('someone')"));
+    const err = await sqlError(
+      db.as(u.id).query("select * from public.start_chess_claim('someone')"),
+    );
     expect(err.message).toMatch(/eligibility_required/);
   });
 
   it("rejects malformed usernames", async () => {
     const u = await eligibleUser();
     for (const bad of ["ab", "has space", "x".repeat(26), "bad!char", ""]) {
-      const err = await sqlError(db.as(u.id).query("select * from public.start_chess_claim($1)", [bad]));
+      const err = await sqlError(
+        db.as(u.id).query("select * from public.start_chess_claim($1)", [bad]),
+      );
       expect(err.message).toMatch(/invalid_username/);
     }
   });
@@ -112,7 +141,9 @@ describe("student eligibility allowlist", () => {
 describe("strict one-to-one ownership", () => {
   it("one Google account cannot link two Chess.com accounts", async () => {
     const p = await db.onboard();
-    const err = await sqlError(db.as(p.id).query("select * from public.start_chess_claim('another_account')"));
+    const err = await sqlError(
+      db.as(p.id).query("select * from public.start_chess_claim('another_account')"),
+    );
     expect(err.message).toMatch(/already_linked/);
 
     // Even writing straight to the table (trusted role) hits the UNIQUE constraint.
@@ -136,15 +167,28 @@ describe("strict one-to-one ownership", () => {
     const result = await confirm(claim.id, "contested_name", 99);
     expect(result).toMatchObject({ ok: false, reason: "chess_account_already_linked" });
 
-    const after = (await db.admin.query("select status, review_reason from public.chess_link_claims where id = $1", [claim.id])).rows[0];
-    expect(after).toMatchObject({ status: "rejected", review_reason: "chess_account_already_linked" });
-    const links = await db.admin.query("select user_id from public.chess_account_links where chess_username = 'contested_name'");
+    const after = (
+      await db.admin.query(
+        "select status, review_reason from public.chess_link_claims where id = $1",
+        [claim.id],
+      )
+    ).rows[0];
+    expect(after).toMatchObject({
+      status: "rejected",
+      review_reason: "chess_account_already_linked",
+    });
+    const links = await db.admin.query(
+      "select user_id from public.chess_account_links where chess_username = 'contested_name'",
+    );
     expect(links.rows.map((r) => r.user_id)).toEqual([owner.id]);
 
     // The rival is told, and is not approved.
     const note = await db.as(rival.id).query("select type, title from public.notifications");
     expect(note.rows.some((n) => n.type === "verification_result")).toBe(true);
-    expect((await db.admin.query("select is_approved from public.profiles where id = $1", [rival.id])).rows[0].is_approved).toBe(false);
+    expect(
+      (await db.admin.query("select is_approved from public.profiles where id = $1", [rival.id]))
+        .rows[0].is_approved,
+    ).toBe(false);
   });
 
   it("the same Chess.com player id cannot back two links (rename-proof)", async () => {
@@ -170,14 +214,19 @@ describe("strict one-to-one ownership", () => {
     try {
       await tx1.query("begin");
       await tx1.query("set local role service_role");
-      const first = await tx1.query("select public.confirm_chess_link($1, 'race_target', 1001, 'profile_code') as r", [c1.id]);
+      const first = await tx1.query(
+        "select public.confirm_chess_link($1, 'race_target', 1001, 'profile_code') as r",
+        [c1.id],
+      );
       expect(first.rows[0].r.ok).toBe(true);
 
       await tx2.query("begin");
       await tx2.query("set local role service_role");
       let settled = false;
       const second = tx2
-        .query("select public.confirm_chess_link($1, 'race_target', 1002, 'profile_code') as r", [c2.id])
+        .query("select public.confirm_chess_link($1, 'race_target', 1002, 'profile_code') as r", [
+          c2.id,
+        ])
         .then((r) => {
           settled = true;
           return r;
@@ -194,17 +243,25 @@ describe("strict one-to-one ownership", () => {
       await tx2.end();
     }
 
-    const owners = await db.admin.query("select user_id from public.chess_account_links where chess_username = 'race_target'");
+    const owners = await db.admin.query(
+      "select user_id from public.chess_account_links where chess_username = 'race_target'",
+    );
     expect(owners.rows).toEqual([{ user_id: u1.id }]);
   });
 
   it("many simultaneous claimants still yield exactly one owner", async () => {
     const users = await Promise.all(Array.from({ length: 6 }, () => eligibleUser()));
     const claims = await Promise.all(users.map((u) => startClaim(u.id, "crowded_name")));
-    const results = await Promise.all(claims.map((c, i) => confirm(c.id, "crowded_name", 5000 + i)));
+    const results = await Promise.all(
+      claims.map((c, i) => confirm(c.id, "crowded_name", 5000 + i)),
+    );
     expect(results.filter((r) => r.ok)).toHaveLength(1);
-    expect(results.filter((r) => !r.ok).every((r) => r.reason === "chess_account_already_linked")).toBe(true);
-    const owners = await db.admin.query("select count(*)::int as n from public.chess_account_links where chess_username = 'crowded_name'");
+    expect(
+      results.filter((r) => !r.ok).every((r) => r.reason === "chess_account_already_linked"),
+    ).toBe(true);
+    const owners = await db.admin.query(
+      "select count(*)::int as n from public.chess_account_links where chess_username = 'crowded_name'",
+    );
     expect(owners.rows[0].n).toBe(1);
   });
 
@@ -222,14 +279,23 @@ describe("strict one-to-one ownership", () => {
   it("refuses to confirm when the observed username does not match the claim", async () => {
     const u = await eligibleUser();
     const claim = await startClaim(u.id, "claimed_name");
-    expect(await confirm(claim.id, "someone_else", 1)).toMatchObject({ ok: false, reason: "username_mismatch" });
+    expect(await confirm(claim.id, "someone_else", 1)).toMatchObject({
+      ok: false,
+      reason: "username_mismatch",
+    });
   });
 
   it("cannot confirm an expired claim", async () => {
     const u = await eligibleUser();
     const claim = await startClaim(u.id, "slow_player");
-    await db.admin.query("update public.chess_link_claims set code_expires_at = now() - interval '1 minute' where id = $1", [claim.id]);
-    expect(await confirm(claim.id, "slow_player", 2)).toMatchObject({ ok: false, reason: "claim_expired" });
+    await db.admin.query(
+      "update public.chess_link_claims set code_expires_at = now() - interval '1 minute' where id = $1",
+      [claim.id],
+    );
+    expect(await confirm(claim.id, "slow_player", 2)).toMatchObject({
+      ok: false,
+      reason: "claim_expired",
+    });
   });
 });
 
@@ -246,9 +312,23 @@ describe("verified identity is immutable to students", () => {
     }
     // Nor can someone else insert a link pointing at their own id.
     expect(
-      (await sqlError(db.as(other.id).query("insert into public.chess_account_links (user_id, chess_username, verification_method) values ($1, 'self_issued', 'admin_review')", [other.id]))).code,
+      (
+        await sqlError(
+          db
+            .as(other.id)
+            .query(
+              "insert into public.chess_account_links (user_id, chess_username, verification_method) values ($1, 'self_issued', 'admin_review')",
+              [other.id],
+            ),
+        )
+      ).code,
     ).toBe("42501");
-    const row = (await db.admin.query("select chess_username from public.chess_account_links where user_id = $1", [p.id])).rows[0];
+    const row = (
+      await db.admin.query(
+        "select chess_username from public.chess_account_links where user_id = $1",
+        [p.id],
+      )
+    ).rows[0];
     expect(row.chess_username).toBe("locked_in");
   });
 
@@ -266,7 +346,10 @@ describe("verified identity is immutable to students", () => {
 
   it("refuses a new claim while a verified link exists", async () => {
     const p = await db.onboard();
-    expect((await sqlError(db.as(p.id).query("select * from public.start_chess_claim('brand_new')"))).message).toMatch(/already_linked/);
+    expect(
+      (await sqlError(db.as(p.id).query("select * from public.start_chess_claim('brand_new')")))
+        .message,
+    ).toMatch(/already_linked/);
   });
 
   it("generates verification codes in the database; clients cannot supply or confirm them", async () => {
@@ -276,18 +359,61 @@ describe("verified identity is immutable to students", () => {
     expect(a.verification_code).toMatch(/^MNNIT-[A-HJKMNP-Z2-9]{8}$/);
     expect(b.verification_code).not.toBe(a.verification_code);
 
-    expect((await sqlError(db.as(u.id).query("insert into public.chess_link_claims (user_id, chess_username, verification_code) values ($1, 'x_forge', 'hello')", [u.id]))).code).toBe("42501");
-    expect((await sqlError(db.as(u.id).query("update public.chess_link_claims set verification_code = 'hello' where user_id = $1", [u.id]))).code).toBe("42501");
-    expect((await sqlError(db.as(u.id).query("select public.confirm_chess_link($1, 'code_probe', 1, 'profile_code')", [b.id]))).code).toBe("42501");
-    expect((await sqlError(db.anon.query("select public.confirm_chess_link($1, 'code_probe', 1, 'profile_code')", [b.id]))).code).toBe("42501");
+    expect(
+      (
+        await sqlError(
+          db
+            .as(u.id)
+            .query(
+              "insert into public.chess_link_claims (user_id, chess_username, verification_code) values ($1, 'x_forge', 'hello')",
+              [u.id],
+            ),
+        )
+      ).code,
+    ).toBe("42501");
+    expect(
+      (
+        await sqlError(
+          db
+            .as(u.id)
+            .query(
+              "update public.chess_link_claims set verification_code = 'hello' where user_id = $1",
+              [u.id],
+            ),
+        )
+      ).code,
+    ).toBe("42501");
+    expect(
+      (
+        await sqlError(
+          db
+            .as(u.id)
+            .query("select public.confirm_chess_link($1, 'code_probe', 1, 'profile_code')", [b.id]),
+        )
+      ).code,
+    ).toBe("42501");
+    expect(
+      (
+        await sqlError(
+          db.anon.query("select public.confirm_chess_link($1, 'code_probe', 1, 'profile_code')", [
+            b.id,
+          ]),
+        )
+      ).code,
+    ).toBe("42501");
     // Starting a new claim supersedes the old one: a single open claim per user.
-    const open = await db.admin.query("select count(*)::int as n from public.chess_link_claims where user_id = $1 and status in ('pending','needs_review')", [u.id]);
+    const open = await db.admin.query(
+      "select count(*)::int as n from public.chess_link_claims where user_id = $1 and status in ('pending','needs_review')",
+      [u.id],
+    );
     expect(open.rows[0].n).toBe(1);
   });
 
   it("does not offer OAuth until Chess.com has approved the application", async () => {
     const u = await eligibleUser();
-    const err = await sqlError(db.as(u.id).query("select * from public.start_chess_claim('oauth_try', 'oauth')"));
+    const err = await sqlError(
+      db.as(u.id).query("select * from public.start_chess_claim('oauth_try', 'oauth')"),
+    );
     expect(err.message).toMatch(/oauth_unavailable/);
   });
 });
@@ -304,29 +430,44 @@ describe("only complete, verified, active players are public", () => {
     await confirm(c.id, "unfinished_player", 123456); // verified but onboarding not completed
 
     const suspended = await db.onboard({ username: "suspended_player" });
-    await db.admin.query("update public.profiles set account_status = 'suspended' where id = $1", [suspended.id]);
+    await db.admin.query("update public.profiles set account_status = 'suspended' where id = $1", [
+      suspended.id,
+    ]);
 
     const names = async () =>
-      (await db.anon.query("select chess_username from public.get_leaderboard('chesscom_rating', 'rapid', 100, 0)")).rows.map((r) => r.chess_username);
+      (
+        await db.anon.query(
+          "select chess_username from public.get_leaderboard('chesscom_rating', 'rapid', 100, 0)",
+        )
+      ).rows.map((r) => r.chess_username);
     // Give everyone a rating so only approval, not rating absence, decides visibility.
     for (const u of [verified, suspended]) {
-      await db.service.query("select public.record_player_sync($1, true, null, null, null, null, $2::jsonb, 3600)", [
-        u.id,
-        JSON.stringify([{ time_class: "rapid", rating: 1500 }]),
-      ]);
+      await db.service.query(
+        "select public.record_player_sync($1, true, null, null, null, null, $2::jsonb, 3600)",
+        [u.id, JSON.stringify([{ time_class: "rapid", rating: 1500 }])],
+      );
     }
-    await db.admin.query("insert into public.chess_ratings (user_id, time_class, rating) values ($1, 'rapid', 1800), ($2, 'rapid', 1900) on conflict do nothing", [pending.id, unfinished.id]);
+    await db.admin.query(
+      "insert into public.chess_ratings (user_id, time_class, rating) values ($1, 'rapid', 1800), ($2, 'rapid', 1900) on conflict do nothing",
+      [pending.id, unfinished.id],
+    );
 
     const hidden = ["pending_player", "unfinished_player", "suspended_player"];
     const listed = await names();
     expect(listed).toContain("listed_player");
     for (const h of hidden) expect(listed).not.toContain(h);
 
-    const dir = (await db.anon.query("select chess_username from public.get_player_directory(null, 'rapid', null, null, null, false, 'name', 100, 0)")).rows.map((r) => r.chess_username);
+    const dir = (
+      await db.anon.query(
+        "select chess_username from public.get_player_directory(null, 'rapid', null, null, null, false, 'name', 100, 0)",
+      )
+    ).rows.map((r) => r.chess_username);
     expect(dir).toContain("listed_player");
     for (const h of hidden) expect(dir).not.toContain(h);
 
-    const links = (await db.anon.query("select chess_username from public.chess_account_links")).rows.map((r) => r.chess_username);
+    const links = (
+      await db.anon.query("select chess_username from public.chess_account_links")
+    ).rows.map((r) => r.chess_username);
     expect(links).toContain("listed_player");
     for (const h of hidden) expect(links).not.toContain(h);
 
@@ -335,7 +476,9 @@ describe("only complete, verified, active players are public", () => {
     for (const u of [pending, unfinished, suspended]) expect(profiles).not.toContain(u.id);
 
     // Ratings of unapproved players are not readable either.
-    const ratings = (await db.anon.query("select user_id from public.chess_ratings")).rows.map((r) => r.user_id);
+    const ratings = (await db.anon.query("select user_id from public.chess_ratings")).rows.map(
+      (r) => r.user_id,
+    );
     expect(ratings).toContain(verified.id);
     for (const u of [pending, unfinished, suspended]) expect(ratings).not.toContain(u.id);
   });
@@ -347,15 +490,35 @@ describe("admin-reviewed fallback and account recovery", () => {
     const admin = await db.createUser();
     await db.makeAdmin(admin.id, "verification_admin");
     await startClaim(u.id, "manual_case");
-    const review = await db.as(u.id).query("select * from public.submit_claim_for_review('I met the admins at the chess club room and can show the account')");
+    const review = await db
+      .as(u.id)
+      .query(
+        "select * from public.submit_claim_for_review('I met the admins at the chess club room and can show the account')",
+      );
     expect(review.rows[0].status).toBe("needs_review");
 
-    const res = await db.as(admin.id).query("select public.admin_review_claim($1, true, 'Verified in person at the club room', 555) as r", [review.rows[0].id]);
+    const res = await db
+      .as(admin.id)
+      .query(
+        "select public.admin_review_claim($1, true, 'Verified in person at the club room', 555) as r",
+        [review.rows[0].id],
+      );
     expect(res.rows[0].r.ok).toBe(true);
-    const link = (await db.admin.query("select verification_method, chess_player_id from public.chess_account_links where user_id = $1", [u.id])).rows[0];
+    const link = (
+      await db.admin.query(
+        "select verification_method, chess_player_id from public.chess_account_links where user_id = $1",
+        [u.id],
+      )
+    ).rows[0];
     expect(link).toMatchObject({ verification_method: "admin_review" });
-    const audit = await db.admin.query("select actor_id, action, reason from public.audit_logs where action = 'chess_link.verified' and target_id = $1", [review.rows[0].id]);
-    expect(audit.rows[0]).toMatchObject({ actor_id: admin.id, reason: "Verified in person at the club room" });
+    const audit = await db.admin.query(
+      "select actor_id, action, reason from public.audit_logs where action = 'chess_link.verified' and target_id = $1",
+      [review.rows[0].id],
+    );
+    expect(audit.rows[0]).toMatchObject({
+      actor_id: admin.id,
+      reason: "Verified in person at the club room",
+    });
   });
 
   it("recovery approval frees a username but never grants it", async () => {
@@ -364,30 +527,71 @@ describe("admin-reviewed fallback and account recovery", () => {
     const admin = await db.createUser();
     await db.makeAdmin(admin.id, "verification_admin");
 
-    const req = await db.as(claimant.id).query(
-      "select * from public.request_account_recovery('transfer_username', 'lost_access', 'My old Google account was deactivated when I graduated')",
-    );
-    const approved = await db.as(admin.id).query("select * from public.admin_resolve_recovery($1, true, 'Confirmed identity with the old roll number')", [req.rows[0].id]);
+    const req = await db
+      .as(claimant.id)
+      .query(
+        "select * from public.request_account_recovery('transfer_username', 'lost_access', 'My old Google account was deactivated when I graduated')",
+      );
+    const approved = await db
+      .as(admin.id)
+      .query(
+        "select * from public.admin_resolve_recovery($1, true, 'Confirmed identity with the old roll number')",
+        [req.rows[0].id],
+      );
     expect(approved.rows[0].status).toBe("approved");
 
-    expect((await db.admin.query("select count(*)::int as n from public.chess_account_links where user_id = $1", [holder.id])).rows[0].n).toBe(0);
-    expect((await db.admin.query("select is_approved from public.profiles where id = $1", [holder.id])).rows[0].is_approved).toBe(false);
-    const history = await db.admin.query("select chess_username, unlinked_by from public.chess_link_history where user_id = $1", [holder.id]);
+    expect(
+      (
+        await db.admin.query(
+          "select count(*)::int as n from public.chess_account_links where user_id = $1",
+          [holder.id],
+        )
+      ).rows[0].n,
+    ).toBe(0);
+    expect(
+      (await db.admin.query("select is_approved from public.profiles where id = $1", [holder.id]))
+        .rows[0].is_approved,
+    ).toBe(false);
+    const history = await db.admin.query(
+      "select chess_username, unlinked_by from public.chess_link_history where user_id = $1",
+      [holder.id],
+    );
     expect(history.rows[0]).toMatchObject({ chess_username: "lost_access", unlinked_by: admin.id });
 
     // The claimant still has to prove ownership through normal verification.
-    expect((await db.admin.query("select count(*)::int as n from public.chess_account_links where user_id = $1", [claimant.id])).rows[0].n).toBe(0);
+    expect(
+      (
+        await db.admin.query(
+          "select count(*)::int as n from public.chess_account_links where user_id = $1",
+          [claimant.id],
+        )
+      ).rows[0].n,
+    ).toBe(0);
     const claim = await startClaim(claimant.id, "lost_access");
     expect((await confirm(claim.id, "lost_access", 4321)).ok).toBe(true);
   });
 
   it("only verification admins can resolve recovery requests", async () => {
     const claimant = await eligibleUser();
-    const req = await db.as(claimant.id).query("select * from public.request_account_recovery('change_username', 'new_handle', 'I changed my handle and need to relink')");
+    const req = await db
+      .as(claimant.id)
+      .query(
+        "select * from public.request_account_recovery('change_username', 'new_handle', 'I changed my handle and need to relink')",
+      );
     const analyst = await db.createUser();
     await db.makeAdmin(analyst.id, "analyst");
     for (const actor of [claimant.id, analyst.id]) {
-      expect((await sqlError(db.as(actor).query("select * from public.admin_resolve_recovery($1, true, 'trying my luck')", [req.rows[0].id]))).code).toBe("42501");
+      expect(
+        (
+          await sqlError(
+            db
+              .as(actor)
+              .query("select * from public.admin_resolve_recovery($1, true, 'trying my luck')", [
+                req.rows[0].id,
+              ]),
+          )
+        ).code,
+      ).toBe("42501");
     }
   });
 });

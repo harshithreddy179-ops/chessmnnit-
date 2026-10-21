@@ -3,7 +3,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 /** Only same-site relative paths are honoured; anything else could be an open redirect. */
 function safeNext(value: string | null): string {
-  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\")) return "/dashboard";
+  if (!value || !value.startsWith("/") || value.startsWith("//") || value.includes("\\"))
+    return "/dashboard";
   return value;
 }
 
@@ -13,9 +14,13 @@ function safeNext(value: string | null): string {
  */
 export async function GET(request: NextRequest) {
   const url = new URL(request.url);
-  const fail = (reason: string) => NextResponse.redirect(new URL(`/auth/error?reason=${encodeURIComponent(reason)}`, url));
+  const fail = (reason: string) =>
+    NextResponse.redirect(new URL(`/auth/error?reason=${encodeURIComponent(reason)}`, url));
 
-  if (url.searchParams.get("error")) return fail(url.searchParams.get("error") === "access_denied" ? "access_denied" : "provider_error");
+  if (url.searchParams.get("error"))
+    return fail(
+      url.searchParams.get("error") === "access_denied" ? "access_denied" : "provider_error",
+    );
   const code = url.searchParams.get("code");
   if (!code) return fail("missing_code");
 

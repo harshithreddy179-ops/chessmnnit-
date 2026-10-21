@@ -1,12 +1,28 @@
 "use client";
 
 import type { RealtimeChannel } from "@supabase/supabase-js";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { api, ApiClientError } from "@/lib/api-client";
 import {
-  aggregatePresence, applyGrace, displayStatus, PRESENCE_CHANNEL, PRESENCE_GRACE_MS, STATUS_LABEL,
-  type DisplayStatus, type PresenceMode, type PresenceState, type TrackedUser,
+  aggregatePresence,
+  applyGrace,
+  displayStatus,
+  PRESENCE_CHANNEL,
+  PRESENCE_GRACE_MS,
+  STATUS_LABEL,
+  type DisplayStatus,
+  type PresenceMode,
+  type PresenceState,
+  type TrackedUser,
 } from "@/lib/presence";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { cn } from "@/lib/utils";
@@ -37,7 +53,15 @@ export function usePresence(): PresenceContextValue | null {
  *   period (see lib/presence.ts) hides blips.
  * - "Invisible" users never track, so everyone else sees them as offline.
  */
-export function PresenceProvider({ userId, initialMode, children }: { userId: string; initialMode: PresenceMode; children: React.ReactNode }) {
+export function PresenceProvider({
+  userId,
+  initialMode,
+  children,
+}: {
+  userId: string;
+  initialMode: PresenceMode;
+  children: React.ReactNode;
+}) {
   const [tracked, setTracked] = useState<ReadonlyMap<string, TrackedUser>>(new Map());
   const [connection, setConnection] = useState<Connection>("connecting");
   const [mode, setModeState] = useState<PresenceMode>(initialMode);
@@ -52,7 +76,12 @@ export function PresenceProvider({ userId, initialMode, children }: { userId: st
       await channel.untrack();
       return;
     }
-    await channel.track({ user_id: userId, status: modeRef.current, tab_id: tabId.current, online_at: new Date().toISOString() });
+    await channel.track({
+      user_id: userId,
+      status: modeRef.current,
+      tab_id: tabId.current,
+      online_at: new Date().toISOString(),
+    });
   }, [userId]);
 
   useEffect(() => {
@@ -64,7 +93,9 @@ export function PresenceProvider({ userId, initialMode, children }: { userId: st
       return () => clearTimeout(t);
     }
     let cancelled = false;
-    const channel = supabase.channel(PRESENCE_CHANNEL, { config: { presence: { key: userId }, private: true } });
+    const channel = supabase.channel(PRESENCE_CHANNEL, {
+      config: { presence: { key: userId }, private: true },
+    });
     channelRef.current = channel;
 
     const sync = () => {
@@ -120,7 +151,9 @@ export function PresenceProvider({ userId, initialMode, children }: { userId: st
         modeRef.current = previous;
         setModeState(previous);
         void track();
-        toast.error(error instanceof ApiClientError ? error.message : "Could not change your status.");
+        toast.error(
+          error instanceof ApiClientError ? error.message : "Could not change your status.",
+        );
       }
     },
     [track],
@@ -132,7 +165,12 @@ export function PresenceProvider({ userId, initialMode, children }: { userId: st
       mode,
       connection,
       setMode,
-      statusOf: (id) => (id === userId ? (mode === "invisible" ? "offline" : mode) : displayStatus(tracked, id, connection)),
+      statusOf: (id) =>
+        id === userId
+          ? mode === "invisible"
+            ? "offline"
+            : mode
+          : displayStatus(tracked, id, connection),
     }),
     [userId, mode, connection, tracked, setMode],
   );
@@ -148,15 +186,33 @@ const DOT: Record<DisplayStatus, string> = {
 };
 
 /** Small status dot + label for a player. Renders nothing for signed-out visitors. */
-export function PresenceDot({ userId, withLabel = true, className }: { userId: string; withLabel?: boolean; className?: string }) {
+export function PresenceDot({
+  userId,
+  withLabel = true,
+  className,
+}: {
+  userId: string;
+  withLabel?: boolean;
+  className?: string;
+}) {
   const presence = usePresence();
   if (!presence) return null;
   const status = presence.statusOf(userId);
   const own = userId === presence.userId && presence.mode === "invisible";
   const label = own ? "Invisible (only you see this)" : STATUS_LABEL[status];
   return (
-    <span className={cn("inline-flex items-center gap-1.5 text-xs text-muted-foreground", className)} title={label}>
-      <span aria-hidden className={cn("size-2 rounded-full", DOT[status], status === "available" && "animate-pulse-ring")} />
+    <span
+      className={cn("inline-flex items-center gap-1.5 text-xs text-muted-foreground", className)}
+      title={label}
+    >
+      <span
+        aria-hidden
+        className={cn(
+          "size-2 rounded-full",
+          DOT[status],
+          status === "available" && "animate-pulse-ring",
+        )}
+      />
       {withLabel ? <span>{label}</span> : <span className="sr-only">{label}</span>}
     </span>
   );

@@ -14,11 +14,21 @@ export interface ChallengeView extends ChallengeRow {
   timeControlLabel: string;
 }
 
-const ACTIVE = ["pending", "accepted", "waiting_for_game", "checking_result", "needs_review"] as const;
+const ACTIVE = [
+  "pending",
+  "accepted",
+  "waiting_for_game",
+  "checking_result",
+  "needs_review",
+] as const;
 export const isActiveStatus = (s: string) => (ACTIVE as readonly string[]).includes(s);
 
 /** Challenges the signed-in user takes part in, with their opponent's display name. */
-export async function getMyChallenges(db: Db, userId: string, limit = 100): Promise<ChallengeView[]> {
+export async function getMyChallenges(
+  db: Db,
+  userId: string,
+  limit = 100,
+): Promise<ChallengeView[]> {
   const { data } = await db
     .from("challenges")
     .select("*")
@@ -30,9 +40,15 @@ export async function getMyChallenges(db: Db, userId: string, limit = 100): Prom
 }
 
 async function decorate(db: Db, userId: string, rows: ChallengeRow[]): Promise<ChallengeView[]> {
-  const ids = [...new Set(rows.flatMap((r) => [r.challenger_id, r.recipient_id]).filter((id) => id !== userId))];
+  const ids = [
+    ...new Set(
+      rows.flatMap((r) => [r.challenger_id, r.recipient_id]).filter((id) => id !== userId),
+    ),
+  ];
   const [names, controls] = await Promise.all([
-    ids.length ? db.from("profiles").select("id,display_name").in("id", ids) : Promise.resolve({ data: [] as { id: string; display_name: string }[] }),
+    ids.length
+      ? db.from("profiles").select("id,display_name").in("id", ids)
+      : Promise.resolve({ data: [] as { id: string; display_name: string }[] }),
     db.from("supported_time_controls").select("time_control,label"),
   ]);
   const nameOf = new Map((names.data ?? []).map((p) => [p.id, p.display_name]));
@@ -57,11 +73,22 @@ export async function getChallengeDetail(db: Db, userId: string, id: string) {
   const [view] = await decorate(db, userId, [data]);
   const [events, attempts, match, disputes] = await Promise.all([
     db.from("challenge_events").select("*").eq("challenge_id", id).order("id"),
-    db.from("match_sync_attempts").select("id,outcome,candidates,detail,error,attempted_at").eq("challenge_id", id).order("id", { ascending: false }).limit(20),
+    db
+      .from("match_sync_attempts")
+      .select("id,outcome,candidates,detail,error,attempted_at")
+      .eq("challenge_id", id)
+      .order("id", { ascending: false })
+      .limit(20),
     db.from("college_matches").select("*").eq("challenge_id", id).maybeSingle(),
     db.from("match_disputes").select("*").eq("challenge_id", id).order("created_at"),
   ]);
-  return { challenge: view!, events: events.data ?? [], attempts: attempts.data ?? [], match: match.data, disputes: disputes.data ?? [] };
+  return {
+    challenge: view!,
+    events: events.data ?? [],
+    attempts: attempts.data ?? [],
+    match: match.data,
+    disputes: disputes.data ?? [],
+  };
 }
 
 export async function getNotifications(db: Db, userId: string, page: number, pageSize = 20) {

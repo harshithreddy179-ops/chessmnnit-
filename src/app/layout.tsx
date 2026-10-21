@@ -12,7 +12,12 @@ export const metadata: Metadata = {
   description:
     "The chess community of MNNIT Allahabad: verified Chess.com players, college leaderboards, challenges and automatically verified match results.",
   applicationName: SITE.name,
-  openGraph: { type: "website", siteName: SITE.fullName, title: SITE.fullName, description: SITE.tagline },
+  openGraph: {
+    type: "website",
+    siteName: SITE.fullName,
+    title: SITE.fullName,
+    description: SITE.tagline,
+  },
   robots: { index: true, follow: true },
 };
 
@@ -26,9 +31,16 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${GeistSans.variable} ${GeistMono.variable}`} suppressHydrationWarning>
+    <html
+      lang="en"
+      className={`${GeistSans.variable} ${GeistMono.variable}`}
+      suppressHydrationWarning
+    >
       <body className="min-h-dvh bg-background font-sans text-foreground antialiased">
-        <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground">
+        <a
+          href="#main"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus:z-[100] focus:rounded-md focus:bg-primary focus:px-3 focus:py-2 focus:text-primary-foreground"
+        >
           Skip to content
         </a>
         <Providers>

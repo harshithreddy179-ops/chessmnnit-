@@ -12,10 +12,10 @@ beforeAll(async () => {
     P[k] = await db.onboard({ username: `lb_${k}`, name: `Player ${k.toUpperCase()}` });
   }
   const rate = async (p: Player, cls: string, rating: number, w: number, l: number, d: number) =>
-    db.service.query("select public.record_player_sync($1, true, null, null, null, null, $2::jsonb, 3600)", [
-      p.id,
-      JSON.stringify([{ time_class: cls, rating, wins: w, losses: l, draws: d }]),
-    ]);
+    db.service.query(
+      "select public.record_player_sync($1, true, null, null, null, null, $2::jsonb, 3600)",
+      [p.id, JSON.stringify([{ time_class: cls, rating, wins: w, losses: l, draws: d }])],
+    );
   await rate(P.a, "rapid", 1800, 10, 5, 1);
   await rate(P.b, "rapid", 1800, 20, 10, 2);
   await rate(P.c, "rapid", 1500, 5, 5, 0);
@@ -27,9 +27,19 @@ beforeAll(async () => {
     db.admin.query(
       `insert into public.college_matches (game_url, white_user_id, black_user_id, white_username, black_username, result, ended_at, source)
        values ($1, $2, $3, $4, $5, $6, now() - ($7 || ' days')::interval - ($8 || ' minutes')::interval, 'automatic')`,
-      [`https://www.chess.com/game/live/${seq++}`, w.id, b.id, w.username, b.username, r, String(daysAgo), String(seq % 500)],
+      [
+        `https://www.chess.com/game/live/${seq++}`,
+        w.id,
+        b.id,
+        w.username,
+        b.username,
+        r,
+        String(daysAgo),
+        String(seq % 500),
+      ],
     );
-  for (const k of ["a", "b", "c"] as const) for (let i = 0; i < 3; i++) await add(P[k], P.e, "white");
+  for (const k of ["a", "b", "c"] as const)
+    for (let i = 0; i < 3; i++) await add(P[k], P.e, "white");
   await add(P.b, P.f, "black");
   await add(P.f, P.e, "draw");
   await add(P.e, P.f, "draw");
@@ -39,13 +49,25 @@ afterAll(async () => {
 });
 
 const board = async (name: string, cls = "rapid", limit = 50, offset = 0) =>
-  (await db.anon.query("select * from public.get_leaderboard($1, $2, $3, $4)", [name, cls, limit, offset])).rows;
+  (
+    await db.anon.query("select * from public.get_leaderboard($1, $2, $3, $4)", [
+      name,
+      cls,
+      limit,
+      offset,
+    ])
+  ).rows;
 const names = (rows: QueryResultRow[]): string[] => rows.map((r) => r.chess_username as string);
 
 describe("leaderboards", () => {
   it("ranks the official Chess.com rating per category and never merges categories", async () => {
     // Tie at 1800 is broken by the larger official sample (32 vs 16 games); the 1500 tie falls through to username.
-    expect(names(await board("chesscom_rating", "rapid"))).toEqual(["lb_b", "lb_a", "lb_c", "lb_f"]);
+    expect(names(await board("chesscom_rating", "rapid"))).toEqual([
+      "lb_b",
+      "lb_a",
+      "lb_c",
+      "lb_f",
+    ]);
     expect(names(await board("chesscom_rating", "blitz"))).toEqual(["lb_d"]);
     expect(names(await board("chesscom_rating", "bullet"))).toEqual([]);
     const rapid = await board("chesscom_rating", "rapid");
@@ -76,12 +98,16 @@ describe("leaderboards", () => {
     expect(names(strict)).toEqual(["lb_e"]);
     expect(strict[0].games_played).toBe(11);
 
-    await db.admin.query("update public.app_settings set value = '3'::jsonb where key = 'min_games_for_win_rate'");
+    await db.admin.query(
+      "update public.app_settings set value = '3'::jsonb where key = 'min_games_for_win_rate'",
+    );
     const relaxed = await board("win_rate");
     expect(names(relaxed)).toEqual(["lb_a", "lb_c", "lb_b", "lb_f", "lb_e"]);
     expect(relaxed.map((r) => Number(r.win_rate))).toEqual([1, 1, 0.75, 0.33333, 0]);
     expect(relaxed.map((r) => r.games_played)).toEqual([3, 3, 4, 3, 11]);
-    await db.admin.query("update public.app_settings set value = '5'::jsonb where key = 'min_games_for_win_rate'");
+    await db.admin.query(
+      "update public.app_settings set value = '5'::jsonb where key = 'min_games_for_win_rate'",
+    );
   });
 
   it("ranks Elo derived from college matches, highest first", async () => {
@@ -116,7 +142,10 @@ describe("leaderboards", () => {
 
   it("is deterministic and rejects unknown boards", async () => {
     expect(await board("wins")).toEqual(await board("wins"));
-    expect((await sqlError(db.anon.query("select * from public.get_leaderboard('everything', 'rapid')"))).code).toBe("22023");
+    expect(
+      (await sqlError(db.anon.query("select * from public.get_leaderboard('everything', 'rapid')")))
+        .code,
+    ).toBe("22023");
     // Limits are clamped, never trusted.
     expect((await board("games", "rapid", 100_000)).length).toBeLessThanOrEqual(100);
   });
@@ -124,19 +153,44 @@ describe("leaderboards", () => {
   it("hides demo players unless demo mode is explicitly enabled", async () => {
     await db.admin.query("update public.profiles set is_demo = true where id = $1", [P.f.id]);
     expect(names(await board("chesscom_rating", "rapid"))).not.toContain("lb_f");
-    expect(names((await db.anon.query("select chess_username from public.get_player_directory(null, 'rapid', null, null, null, false, 'name', 100, 0)")).rows)).not.toContain("lb_f");
-    await db.admin.query("update public.app_settings set value = 'true'::jsonb where key = 'include_demo_data'");
+    expect(
+      names(
+        (
+          await db.anon.query(
+            "select chess_username from public.get_player_directory(null, 'rapid', null, null, null, false, 'name', 100, 0)",
+          )
+        ).rows,
+      ),
+    ).not.toContain("lb_f");
+    await db.admin.query(
+      "update public.app_settings set value = 'true'::jsonb where key = 'include_demo_data'",
+    );
     expect(names(await board("chesscom_rating", "rapid"))).toContain("lb_f");
-    await db.admin.query("update public.app_settings set value = 'false'::jsonb where key = 'include_demo_data'");
+    await db.admin.query(
+      "update public.app_settings set value = 'false'::jsonb where key = 'include_demo_data'",
+    );
     await db.admin.query("update public.profiles set is_demo = false where id = $1", [P.f.id]);
   });
 });
 
 describe("player directory", () => {
   const dir = async (args: unknown[] = []) =>
-    (await db.anon.query("select * from public.get_player_directory($1, $2, $3, $4, $5, $6, $7, $8, $9)", [
-      args[0] ?? null, args[1] ?? "rapid", args[2] ?? null, args[3] ?? null, args[4] ?? null, args[5] ?? false, args[6] ?? "rating", args[7] ?? 50, args[8] ?? 0,
-    ])).rows;
+    (
+      await db.anon.query(
+        "select * from public.get_player_directory($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+        [
+          args[0] ?? null,
+          args[1] ?? "rapid",
+          args[2] ?? null,
+          args[3] ?? null,
+          args[4] ?? null,
+          args[5] ?? false,
+          args[6] ?? "rating",
+          args[7] ?? 50,
+          args[8] ?? 0,
+        ],
+      )
+    ).rows;
 
   it("searches by display name or username, escaping wildcard characters", async () => {
     expect(names(await dir(["player c"]))).toEqual(["lb_c"]);
@@ -155,18 +209,36 @@ describe("player directory", () => {
   });
 
   it("filters by preferred time control and challenge availability", async () => {
-    await db.as(P.a.id).query("update public.profiles set preferred_time_classes = '{rapid,blitz}' where id = $1", [P.a.id]);
-    await db.as(P.b.id).query("update public.profiles set open_to_challenges = false where id = $1", [P.b.id]);
+    await db
+      .as(P.a.id)
+      .query("update public.profiles set preferred_time_classes = '{rapid,blitz}' where id = $1", [
+        P.a.id,
+      ]);
+    await db
+      .as(P.b.id)
+      .query("update public.profiles set open_to_challenges = false where id = $1", [P.b.id]);
     expect(names(await dir([null, "rapid", null, null, "blitz"]))).toEqual(["lb_a"]);
     expect(names(await dir([null, "rapid", null, null, null, true]))).not.toContain("lb_b");
   });
 
   it("sorts and paginates without ever shipping the full table", async () => {
-    expect(names(await dir([null, "rapid", null, null, null, false, "name", 3, 0]))).toEqual(["lb_a", "lb_b", "lb_c"]);
+    expect(names(await dir([null, "rapid", null, null, null, false, "name", 3, 0]))).toEqual([
+      "lb_a",
+      "lb_b",
+      "lb_c",
+    ]);
     const page = await dir([null, "rapid", null, null, null, false, "name", 2, 4]);
     expect(page).toHaveLength(2);
     expect(Number(page[0].total_count)).toBe(6);
-    expect((await sqlError(db.anon.query("select * from public.get_player_directory(null, 'rapid', null, null, null, false, 'drop table')"))).code).toBe("22023");
+    expect(
+      (
+        await sqlError(
+          db.anon.query(
+            "select * from public.get_player_directory(null, 'rapid', null, null, null, false, 'drop table')",
+          ),
+        )
+      ).code,
+    ).toBe("22023");
   });
 });
 
@@ -175,14 +247,30 @@ describe("public match history", () => {
     const all = (await db.anon.query("select * from public.get_recent_matches(50, 0)")).rows;
     expect(all).toHaveLength(12);
     expect(Number(all[0].total_count)).toBe(12);
-    expect(all.every((m, i) => i === 0 || new Date(all[i - 1].ended_at) >= new Date(m.ended_at))).toBe(true);
+    expect(
+      all.every((m, i) => i === 0 || new Date(all[i - 1].ended_at) >= new Date(m.ended_at)),
+    ).toBe(true);
 
-    const wins = (await db.anon.query("select * from public.get_recent_matches(50, 0, null, 'lb_f', 'win')")).rows;
+    const wins = (
+      await db.anon.query("select * from public.get_recent_matches(50, 0, null, 'lb_f', 'win')")
+    ).rows;
     expect(wins).toHaveLength(1);
-    expect(wins[0]).toMatchObject({ white_username: "lb_b", black_username: "lb_f", result: "black" });
-    const draws = (await db.anon.query("select * from public.get_recent_matches(50, 0, null, 'lb_f', 'draw')")).rows;
+    expect(wins[0]).toMatchObject({
+      white_username: "lb_b",
+      black_username: "lb_f",
+      result: "black",
+    });
+    const draws = (
+      await db.anon.query("select * from public.get_recent_matches(50, 0, null, 'lb_f', 'draw')")
+    ).rows;
     expect(draws).toHaveLength(2);
-    expect((await sqlError(db.anon.query("select * from public.get_recent_matches(10, 0, null, null, 'win')"))).code).toBe("22023");
+    expect(
+      (
+        await sqlError(
+          db.anon.query("select * from public.get_recent_matches(10, 0, null, null, 'win')"),
+        )
+      ).code,
+    ).toBe("22023");
     expect(wins[0].white_display_name).toBe("Player B");
   });
 

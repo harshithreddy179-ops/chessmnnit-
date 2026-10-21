@@ -31,13 +31,17 @@ export function ratingsFromStats(stats: ChessComStats): RatingRow[] {
     rows.push({
       time_class: timeClass,
       rating: Math.round(rating),
-      ...(category?.best?.rating !== undefined && category.best.rating >= 0 && category.best.rating <= 4000
+      ...(category?.best?.rating !== undefined &&
+      category.best.rating >= 0 &&
+      category.best.rating <= 4000
         ? { best_rating: Math.round(category.best.rating) }
         : {}),
       wins: Math.max(0, category?.record?.win ?? 0),
       losses: Math.max(0, category?.record?.loss ?? 0),
       draws: Math.max(0, category?.record?.draw ?? 0),
-      ...(category?.last?.date ? { last_game_at: new Date(category.last.date * 1000).toISOString() } : {}),
+      ...(category?.last?.date
+        ? { last_game_at: new Date(category.last.date * 1000).toISOString() }
+        : {}),
     });
   }
   return rows;
@@ -52,12 +56,20 @@ export interface SyncOutcome {
 }
 
 /** Refreshes one player's public profile and per-category ratings. Never changes identity. */
-export async function syncOnePlayer(admin: Db, client: Pick<ChessComClient, "getProfile" | "getStats">, player: PlayerToSync): Promise<SyncOutcome> {
+export async function syncOnePlayer(
+  admin: Db,
+  client: Pick<ChessComClient, "getProfile" | "getStats">,
+  player: PlayerToSync,
+): Promise<SyncOutcome> {
   try {
     const profile = await client.getProfile(player.chess_username);
     const closed = profile.status?.toLowerCase().startsWith("closed");
     if (closed) {
-      await admin.rpc("record_player_sync", { p_user: player.user_id, p_ok: false, p_error: "chess.com account is closed" });
+      await admin.rpc("record_player_sync", {
+        p_user: player.user_id,
+        p_ok: false,
+        p_error: "chess.com account is closed",
+      });
       return { ok: false, error: "account_closed" };
     }
     const stats = await client.getStats(player.chess_username);
@@ -66,16 +78,28 @@ export async function syncOnePlayer(admin: Db, client: Pick<ChessComClient, "get
       p_ok: true,
       p_observed_player_id: profile.player_id,
       p_observed_username: profile.username,
-      p_avatar_url: profile.avatar && profile.avatar.startsWith("https://") ? profile.avatar : undefined,
+      p_avatar_url:
+        profile.avatar && profile.avatar.startsWith("https://") ? profile.avatar : undefined,
       p_ratings: ratingsFromStats(stats) as never,
     });
     if (error) throw new Error(error.message);
     const result = data as { ok: boolean; anomaly?: string | null };
     return { ok: result.ok, anomaly: result.anomaly ?? null };
   } catch (error) {
-    const message = error instanceof ChessComError ? `${error.kind}${error.status ? ` (${error.status})` : ""}` : "unexpected error";
-    await admin.rpc("record_player_sync", { p_user: player.user_id, p_ok: false, p_error: message });
-    return { ok: false, error: message, stop: error instanceof ChessComError && error.kind === "rate_limited" };
+    const message =
+      error instanceof ChessComError
+        ? `${error.kind}${error.status ? ` (${error.status})` : ""}`
+        : "unexpected error";
+    await admin.rpc("record_player_sync", {
+      p_user: player.user_id,
+      p_ok: false,
+      p_error: message,
+    });
+    return {
+      ok: false,
+      error: message,
+      stop: error instanceof ChessComError && error.kind === "rate_limited",
+    };
   }
 }
 
@@ -96,8 +120,17 @@ export async function runPlayerSync(
   client: Pick<ChessComClient, "getProfile" | "getStats">,
   options: { limit: number; deadline: number },
 ): Promise<PlayerSyncSummary> {
-  const summary: PlayerSyncSummary = { claimed: 0, synced: 0, failed: 0, anomalies: 0, stoppedEarly: false };
-  const { data, error } = await admin.rpc("claim_players_for_sync", { p_limit: options.limit, p_lease_seconds: 900 });
+  const summary: PlayerSyncSummary = {
+    claimed: 0,
+    synced: 0,
+    failed: 0,
+    anomalies: 0,
+    stoppedEarly: false,
+  };
+  const { data, error } = await admin.rpc("claim_players_for_sync", {
+    p_limit: options.limit,
+    p_lease_seconds: 900,
+  });
   if (error) throw new Error(error.message);
   const players = data ?? [];
   summary.claimed = players.length;

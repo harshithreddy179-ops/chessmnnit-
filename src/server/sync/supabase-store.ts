@@ -23,8 +23,16 @@ const PAGE = 1000; // PostgREST returns at most 1000 rows per request
 /** Production SyncStore: service-role Supabase calls. Each method is a single query / RPC. */
 export function createSupabaseSyncStore(admin: Db): SyncStore {
   const toGame = (r: {
-    id: string; white_username: string; black_username: string; winner: string; time_control: string | null;
-    rules: string; started_at: string | null; ended_at: string; game_url: string; rated: boolean | null;
+    id: string;
+    white_username: string;
+    black_username: string;
+    winner: string;
+    time_control: string | null;
+    rules: string;
+    started_at: string | null;
+    ended_at: string;
+    game_url: string;
+    rated: boolean | null;
   }): GameInput => ({
     id: r.id,
     whiteUsername: r.white_username,
@@ -44,7 +52,12 @@ export function createSupabaseSyncStore(admin: Db): SyncStore {
     },
 
     async claimChallenges(limit, leaseSeconds) {
-      const claimed = rows(await admin.rpc("claim_challenges_for_sync", { p_limit: limit, p_lease_seconds: leaseSeconds }));
+      const claimed = rows(
+        await admin.rpc("claim_challenges_for_sync", {
+          p_limit: limit,
+          p_lease_seconds: leaseSeconds,
+        }),
+      );
       return claimed.map((r) => ({
         id: r.id,
         status: r.status,
@@ -63,7 +76,11 @@ export function createSupabaseSyncStore(admin: Db): SyncStore {
       const names = new Set<string>();
       for (let from = 0; ; from += PAGE) {
         const page = rows(
-          await admin.from("chess_account_links").select("chess_username").order("chess_username").range(from, from + PAGE - 1),
+          await admin
+            .from("chess_account_links")
+            .select("chess_username")
+            .order("chess_username")
+            .range(from, from + PAGE - 1),
         );
         for (const r of page) names.add(r.chess_username);
         if (page.length < PAGE) break;
@@ -72,13 +89,24 @@ export function createSupabaseSyncStore(admin: Db): SyncStore {
     },
 
     async settleMinutes() {
-      const row = check(await admin.from("app_settings").select("value").eq("key", "match_settle_minutes").maybeSingle());
+      const row = check(
+        await admin
+          .from("app_settings")
+          .select("value")
+          .eq("key", "match_settle_minutes")
+          .maybeSingle(),
+      );
       return typeof row?.value === "number" && row.value >= 0 ? row.value : 60;
     },
 
     async getArchiveState(username, month) {
       const row = check(
-        await admin.from("chess_archive_state").select("etag,last_modified").eq("chess_username", username).eq("archive_month", month).maybeSingle(),
+        await admin
+          .from("chess_archive_state")
+          .select("etag,last_modified")
+          .eq("chess_username", username)
+          .eq("archive_month", month)
+          .maybeSingle(),
       );
       return row ? { etag: row.etag, lastModified: row.last_modified } : null;
     },
@@ -86,28 +114,52 @@ export function createSupabaseSyncStore(admin: Db): SyncStore {
     async saveArchiveState(username, month, state) {
       check(
         await admin.from("chess_archive_state").upsert(
-          { chess_username: username, archive_month: month, etag: state.etag, last_modified: state.lastModified, game_count: state.gameCount, checked_at: new Date().toISOString() },
+          {
+            chess_username: username,
+            archive_month: month,
+            etag: state.etag,
+            last_modified: state.lastModified,
+            game_count: state.gameCount,
+            checked_at: new Date().toISOString(),
+          },
           { onConflict: "chess_username,archive_month" },
         ),
       );
     },
 
     async importGames(rows) {
-      return check(await admin.rpc("import_chess_games", { p_games: rows as unknown as Json })) ?? 0;
+      return (
+        check(await admin.rpc("import_chess_games", { p_games: rows as unknown as Json })) ?? 0
+      );
     },
 
     async pairGames(a, b, since) {
-      const cols = "id,white_username,black_username,winner,time_control,rules,started_at,ended_at,game_url,rated";
+      const cols =
+        "id,white_username,black_username,winner,time_control,rules,started_at,ended_at,game_url,rated";
       const [ab, ba] = await Promise.all([
-        admin.from("imported_chess_games").select(cols).eq("white_username", a).eq("black_username", b).gte("ended_at", since.toISOString()),
-        admin.from("imported_chess_games").select(cols).eq("white_username", b).eq("black_username", a).gte("ended_at", since.toISOString()),
+        admin
+          .from("imported_chess_games")
+          .select(cols)
+          .eq("white_username", a)
+          .eq("black_username", b)
+          .gte("ended_at", since.toISOString()),
+        admin
+          .from("imported_chess_games")
+          .select(cols)
+          .eq("white_username", b)
+          .eq("black_username", a)
+          .gte("ended_at", since.toISOString()),
       ]);
-      return [...rows(ab), ...rows(ba)].map(toGame).sort((x, y) => x.endedAt.getTime() - y.endedAt.getTime());
+      return [...rows(ab), ...rows(ba)]
+        .map(toGame)
+        .sort((x, y) => x.endedAt.getTime() - y.endedAt.getTime());
     },
 
     async attachedGameIds(ids) {
       if (ids.length === 0) return new Set();
-      const matched = rows(await admin.from("college_matches").select("game_id").in("game_id", ids));
+      const matched = rows(
+        await admin.from("college_matches").select("game_id").in("game_id", ids),
+      );
       return new Set(matched.map((r) => r.game_id).filter((id): id is string => id !== null));
     },
 
@@ -128,7 +180,13 @@ export function createSupabaseSyncStore(admin: Db): SyncStore {
     },
 
     async finalizeMatch(challengeId, gameId, evidence) {
-      check(await admin.rpc("finalize_challenge_match", { p_challenge_id: challengeId, p_game_id: gameId, p_evidence: evidence as Json }));
+      check(
+        await admin.rpc("finalize_challenge_match", {
+          p_challenge_id: challengeId,
+          p_game_id: gameId,
+          p_evidence: evidence as Json,
+        }),
+      );
     },
   };
 }

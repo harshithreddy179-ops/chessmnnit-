@@ -9,9 +9,21 @@ export function TimeClassBadge({ timeClass }: { timeClass: TimeClass | null | un
 }
 
 /** Chess.com rating with its category, so ratings are never shown as one unexplained number. */
-export function RatingBadge({ rating, timeClass, className }: { rating: number | null | undefined; timeClass: TimeClass; className?: string }) {
+export function RatingBadge({
+  rating,
+  timeClass,
+  className,
+}: {
+  rating: number | null | undefined;
+  timeClass: TimeClass;
+  className?: string;
+}) {
   if (rating === null || rating === undefined) {
-    return <span className={cn("text-sm text-muted-foreground", className)}>Not rated in {TIME_CLASS_LABEL[timeClass].toLowerCase()}</span>;
+    return (
+      <span className={cn("text-sm text-muted-foreground", className)}>
+        Not rated in {TIME_CLASS_LABEL[timeClass].toLowerCase()}
+      </span>
+    );
   }
   return (
     <span className={cn("inline-flex items-baseline gap-1.5", className)}>
@@ -50,15 +62,31 @@ export function DemoBadge() {
 }
 
 export function ResultBadge({ outcome }: { outcome: "win" | "loss" | "draw" }) {
-  const map = { win: ["success", "Win"], loss: ["danger", "Loss"], draw: ["neutral", "Draw"] } as const;
+  const map = {
+    win: ["success", "Win"],
+    loss: ["danger", "Loss"],
+    draw: ["neutral", "Draw"],
+  } as const;
   const [variant, label] = map[outcome];
   return <Badge variant={variant}>{label}</Badge>;
 }
 
 export function RankMark({ rank }: { rank: number }) {
-  const medal = rank === 1 ? "text-warning" : rank === 2 ? "text-muted-foreground" : rank === 3 ? "text-[#c98a5a]" : "";
+  const medal =
+    rank === 1
+      ? "text-warning"
+      : rank === 2
+        ? "text-muted-foreground"
+        : rank === 3
+          ? "text-[#c98a5a]"
+          : "";
   return (
-    <span className={cn("tabular inline-flex size-7 items-center justify-center rounded-md border font-mono text-xs font-semibold", rank <= 3 ? `border-current ${medal}` : "text-muted-foreground")}>
+    <span
+      className={cn(
+        "tabular inline-flex size-7 items-center justify-center rounded-md border font-mono text-xs font-semibold",
+        rank <= 3 ? `border-current ${medal}` : "text-muted-foreground",
+      )}
+    >
       {rank}
     </span>
   );

@@ -22,7 +22,11 @@ export async function SiteHeader() {
         <Brand />
         <nav aria-label="Main" className="ml-6 hidden items-center gap-1 md:flex">
           {PUBLIC_LINKS.map((l) => (
-            <Link key={l.href} href={l.href} className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground">
+            <Link
+              key={l.href}
+              href={l.href}
+              className="rounded-md px-3 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
               {l.label}
             </Link>
           ))}
@@ -32,7 +36,11 @@ export async function SiteHeader() {
           {ctx ? (
             <>
               <NotificationBell />
-              <UserMenu name={ctx.profile.display_name} avatarUrl={ctx.profile.avatar_url} isAdmin={ctx.roles.length > 0} />
+              <UserMenu
+                name={ctx.profile.display_name}
+                avatarUrl={ctx.profile.avatar_url}
+                isAdmin={ctx.roles.length > 0}
+              />
             </>
           ) : (
             <>
@@ -44,7 +52,13 @@ export async function SiteHeader() {
               </Button>
             </>
           )}
-          <MobileNav links={ctx ? [{ href: "/dashboard", label: "Dashboard" }, ...PUBLIC_LINKS] : [{ href: "/login", label: "Sign in" }, ...PUBLIC_LINKS]} />
+          <MobileNav
+            links={
+              ctx
+                ? [{ href: "/dashboard", label: "Dashboard" }, ...PUBLIC_LINKS]
+                : [{ href: "/login", label: "Sign in" }, ...PUBLIC_LINKS]
+            }
+          />
         </div>
       </div>
     </header>

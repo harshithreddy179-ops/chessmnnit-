@@ -2,7 +2,16 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell, LayoutDashboard, Settings, ShieldCheck, Swords, Trophy, Users, type LucideIcon } from "lucide-react";
+import {
+  Bell,
+  LayoutDashboard,
+  Settings,
+  ShieldCheck,
+  Swords,
+  Trophy,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { useNotifications } from "@/components/realtime/notifications";
 import { cn } from "@/lib/utils";
 
@@ -22,12 +31,25 @@ const ITEMS: Item[] = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
-export function SidebarNav({ isAdmin, orientation = "vertical" }: { isAdmin: boolean; orientation?: "vertical" | "horizontal" }) {
+export function SidebarNav({
+  isAdmin,
+  orientation = "vertical",
+}: {
+  isAdmin: boolean;
+  orientation?: "vertical" | "horizontal";
+}) {
   const pathname = usePathname();
   const notifications = useNotifications();
-  const items = isAdmin ? [...ITEMS, { href: "/admin", label: "Admin", icon: ShieldCheck } satisfies Item] : ITEMS;
+  const items = isAdmin
+    ? [...ITEMS, { href: "/admin", label: "Admin", icon: ShieldCheck } satisfies Item]
+    : ITEMS;
   return (
-    <nav aria-label="App" className={cn(orientation === "vertical" ? "grid gap-1" : "scrollbar-thin flex gap-1 overflow-x-auto")}>
+    <nav
+      aria-label="App"
+      className={cn(
+        orientation === "vertical" ? "grid gap-1" : "flex scrollbar-thin gap-1 overflow-x-auto",
+      )}
+    >
       {items.map(({ href, label, icon: Icon, badge }) => {
         const active = pathname === href || pathname.startsWith(`${href}/`);
         return (
@@ -37,13 +59,17 @@ export function SidebarNav({ isAdmin, orientation = "vertical" }: { isAdmin: boo
             aria-current={active ? "page" : undefined}
             className={cn(
               "flex items-center gap-2.5 rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors",
-              active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground",
+              active
+                ? "bg-accent text-accent-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
             <Icon className="size-4" aria-hidden />
             {label}
             {badge === "unread" && notifications && notifications.unread > 0 ? (
-              <span className="tabular ml-auto rounded-full bg-primary px-1.5 text-[10px] leading-4 font-semibold text-primary-foreground">{notifications.unread}</span>
+              <span className="tabular ml-auto rounded-full bg-primary px-1.5 text-[10px] leading-4 font-semibold text-primary-foreground">
+                {notifications.unread}
+              </span>
             ) : null}
           </Link>
         );

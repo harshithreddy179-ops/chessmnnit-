@@ -12,7 +12,11 @@ export function useAction() {
   const [error, setError] = useState<ApiClientError | null>(null);
 
   const run = useCallback(
-    async <T,>(key: string, path: string, options: { method?: string; body?: unknown; success?: string; refresh?: boolean } = {}): Promise<T | null> => {
+    async <T>(
+      key: string,
+      path: string,
+      options: { method?: string; body?: unknown; success?: string; refresh?: boolean } = {},
+    ): Promise<T | null> => {
       setBusy(key);
       setError(null);
       try {
@@ -21,7 +25,10 @@ export function useAction() {
         if (options.refresh !== false) router.refresh();
         return data;
       } catch (e) {
-        const err = e instanceof ApiClientError ? e : new ApiClientError(0, "error", "Something went wrong. Please try again.");
+        const err =
+          e instanceof ApiClientError
+            ? e
+            : new ApiClientError(0, "error", "Something went wrong. Please try again.");
         setError(err);
         return null;
       } finally {

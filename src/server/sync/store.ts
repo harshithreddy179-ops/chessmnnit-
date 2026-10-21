@@ -20,9 +20,19 @@ export interface ClaimedChallenge {
 export interface CheckRecord {
   challengeId: string;
   outcome:
-    | "no_game_found" | "candidate_found" | "settling" | "ambiguous" | "unknown_result"
-    | "archive_unavailable" | "rate_limited" | "error" | "gave_up";
-  newStatus: Exclude<ChallengeStatus, "pending" | "accepted" | "declined" | "cancelled" | "expired" | "result_verified">;
+    | "no_game_found"
+    | "candidate_found"
+    | "settling"
+    | "ambiguous"
+    | "unknown_result"
+    | "archive_unavailable"
+    | "rate_limited"
+    | "error"
+    | "gave_up";
+  newStatus: Exclude<
+    ChallengeStatus,
+    "pending" | "accepted" | "declined" | "cancelled" | "expired" | "result_verified"
+  >;
   nextCheckAt: Date | null;
   settleUntil: Date | null;
   candidates: string[];
@@ -42,13 +52,24 @@ export interface SyncStore {
   /** Normalised usernames of every verified, linked member. */
   memberUsernames(): Promise<Set<string>>;
   settleMinutes(): Promise<number>;
-  getArchiveState(username: string, month: string): Promise<{ etag: string | null; lastModified: string | null } | null>;
-  saveArchiveState(username: string, month: string, state: { etag: string | null; lastModified: string | null; gameCount: number }): Promise<void>;
+  getArchiveState(
+    username: string,
+    month: string,
+  ): Promise<{ etag: string | null; lastModified: string | null } | null>;
+  saveArchiveState(
+    username: string,
+    month: string,
+    state: { etag: string | null; lastModified: string | null; gameCount: number },
+  ): Promise<void>;
   importGames(rows: ImportGameRow[]): Promise<number>;
   /** Imported games between exactly these two players (either colour) ending at or after `since`. */
   pairGames(a: string, b: string, since: Date): Promise<GameInput[]>;
   /** Of these game ids, the ones already attached to a college match. */
   attachedGameIds(ids: string[]): Promise<Set<string>>;
   recordCheck(record: CheckRecord): Promise<void>;
-  finalizeMatch(challengeId: string, gameId: string, evidence: Record<string, unknown>): Promise<void>;
+  finalizeMatch(
+    challengeId: string,
+    gameId: string,
+    evidence: Record<string, unknown>,
+  ): Promise<void>;
 }

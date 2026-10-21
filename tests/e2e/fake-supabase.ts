@@ -50,7 +50,16 @@ export function b64url(input: string | Buffer): string {
 export function makeAccessToken(userId: string, email: string): string {
   const header = b64url(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const now = Math.floor(Date.now() / 1000);
-  const payload = b64url(JSON.stringify({ sub: userId, email, role: "authenticated", aud: "authenticated", iat: now, exp: now + 3600 }));
+  const payload = b64url(
+    JSON.stringify({
+      sub: userId,
+      email,
+      role: "authenticated",
+      aud: "authenticated",
+      iat: now,
+      exp: now + 3600,
+    }),
+  );
   return `${header}.${payload}.${b64url(createHash("sha256").update(userId).digest())}`;
 }
 
@@ -84,7 +93,9 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
 
   // node-pg cannot parse arrays of user-defined enums (it returns the raw "{a,b}" text), whereas
   // PostgREST returns proper JSON arrays. Enum labels in this schema are plain identifiers.
-  const enumArrays = await pool.query("select t.oid::int as oid from pg_type t join pg_type e on e.oid = t.typelem where t.typcategory = 'A' and e.typtype = 'e'");
+  const enumArrays = await pool.query(
+    "select t.oid::int as oid from pg_type t join pg_type e on e.oid = t.typelem where t.typcategory = 'A' and e.typtype = 'e'",
+  );
   for (const { oid } of enumArrays.rows as { oid: number }[]) {
     types.setTypeParser(oid, (v: string) => (v === "{}" ? [] : v.slice(1, -1).split(",")));
   }
@@ -116,11 +127,16 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
   const authenticate = async (req: IncomingMessage): Promise<Actor> => {
     const header = req.headers.authorization ?? "";
     const token = header.startsWith("Bearer ") ? header.slice(7) : "";
-    if (token === opts.secretKey || req.headers.apikey === opts.secretKey) return { role: "service_role", sub: null };
+    if (token === opts.secretKey || req.headers.apikey === opts.secretKey)
+      return { role: "service_role", sub: null };
     if (!token || token === opts.publishableKey) return { role: "anon", sub: null };
     try {
       const payload = JSON.parse(Buffer.from(token.split(".")[1] ?? "", "base64url").toString());
-      if (typeof payload.sub === "string" && UUID.test(payload.sub) && payload.exp > Date.now() / 1000) {
+      if (
+        typeof payload.sub === "string" &&
+        UUID.test(payload.sub) &&
+        payload.exp > Date.now() / 1000
+      ) {
         const u = await pool.query("select 1 from auth.users where id = $1", [payload.sub]);
         if (u.rowCount) return { role: "authenticated", sub: payload.sub };
       }
@@ -130,7 +146,7 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
     throw err(401, "PGRST301", "JWT invalid or expired");
   };
 
-  const withActor = async <T,>(actor: Actor, fn: (q: Q) => Promise<T>): Promise<T> => {
+  const withActor = async <T>(actor: Actor, fn: (q: Q) => Promise<T>): Promise<T> => {
     const c = await pool.connect();
     try {
       await c.query("begin");
@@ -173,7 +189,8 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
     return parts;
   };
 
-  const unquote = (v: string) => (v.startsWith('"') && v.endsWith('"') ? v.slice(1, -1).replaceAll('\\"', '"') : v);
+  const unquote = (v: string) =>
+    v.startsWith('"') && v.endsWith('"') ? v.slice(1, -1).replaceAll('\\"', '"') : v;
 
   function condition(col: string, rest: string, params: unknown[]): string {
     let negate = false;
@@ -192,17 +209,38 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
     };
     let sql: string;
     switch (op) {
-      case "eq": sql = `${c} = ${push(unquote(raw))}`; break;
-      case "neq": sql = `${c} <> ${push(unquote(raw))}`; break;
-      case "gt": sql = `${c} > ${push(unquote(raw))}`; break;
-      case "gte": sql = `${c} >= ${push(unquote(raw))}`; break;
-      case "lt": sql = `${c} < ${push(unquote(raw))}`; break;
-      case "lte": sql = `${c} <= ${push(unquote(raw))}`; break;
-      case "like": sql = `${c} like ${push(raw.replaceAll("*", "%"))}`; break;
-      case "ilike": sql = `${c} ilike ${push(raw.replaceAll("*", "%"))}`; break;
-      case "is": sql = raw === "null" ? `${c} is null` : raw === "true" ? `${c} is true` : `${c} is false`; break;
-      case "in": sql = `${c} = any(${push(splitTop(raw.slice(1, -1)).map(unquote))})`; break;
-      default: throw err(400, "PGRST100", `unsupported operator ${op}`);
+      case "eq":
+        sql = `${c} = ${push(unquote(raw))}`;
+        break;
+      case "neq":
+        sql = `${c} <> ${push(unquote(raw))}`;
+        break;
+      case "gt":
+        sql = `${c} > ${push(unquote(raw))}`;
+        break;
+      case "gte":
+        sql = `${c} >= ${push(unquote(raw))}`;
+        break;
+      case "lt":
+        sql = `${c} < ${push(unquote(raw))}`;
+        break;
+      case "lte":
+        sql = `${c} <= ${push(unquote(raw))}`;
+        break;
+      case "like":
+        sql = `${c} like ${push(raw.replaceAll("*", "%"))}`;
+        break;
+      case "ilike":
+        sql = `${c} ilike ${push(raw.replaceAll("*", "%"))}`;
+        break;
+      case "is":
+        sql = raw === "null" ? `${c} is null` : raw === "true" ? `${c} is true` : `${c} is false`;
+        break;
+      case "in":
+        sql = `${c} = any(${push(splitTop(raw.slice(1, -1)).map(unquote))})`;
+        break;
+      default:
+        throw err(400, "PGRST100", `unsupported operator ${op}`);
     }
     return negate ? `not (${sql})` : sql;
   }
@@ -232,7 +270,9 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
   const selectList = (sp: URLSearchParams) => {
     const s = sp.get("select");
     if (!s || s === "*") return "*";
-    return splitTop(s).map((c) => ident(c.trim())).join(", ");
+    return splitTop(s)
+      .map((c) => ident(c.trim()))
+      .join(", ");
   };
 
   const orderBy = (sp: URLSearchParams) => {
@@ -240,7 +280,11 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
     if (!o) return "";
     const terms = o.split(",").map((term) => {
       const [col, ...mods] = term.split(".");
-      const nulls = mods.includes("nullsfirst") ? " nulls first" : mods.includes("nullslast") ? " nulls last" : "";
+      const nulls = mods.includes("nullsfirst")
+        ? " nulls first"
+        : mods.includes("nullslast")
+          ? " nulls last"
+          : "";
       return `${ident(col!)} ${mods.includes("desc") ? "desc" : "asc"}${nulls}`;
     });
     return ` order by ${terms.join(", ")}`;
@@ -248,13 +292,19 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
 
   const coerce = (table: string, col: string, value: unknown) => {
     const type = tableCols.get(table)?.get(col);
-    if (value !== null && typeof value === "object" && (type === "jsonb" || type === "json")) return JSON.stringify(value);
+    if (value !== null && typeof value === "object" && (type === "jsonb" || type === "json"))
+      return JSON.stringify(value);
     return value;
   };
 
   const oneRow = (rows: unknown[]) => {
     if (rows.length !== 1) {
-      throw err(406, "PGRST116", "JSON object requested, multiple (or no) rows returned", `The result contains ${rows.length} rows`);
+      throw err(
+        406,
+        "PGRST116",
+        "JSON object requested, multiple (or no) rows returned",
+        `The result contains ${rows.length} rows`,
+      );
     }
     return rows[0];
   };
@@ -262,16 +312,20 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
   // --------------------------------------------------------------------- REST
   async function rpc(name: string, body: unknown, actor: Actor): Promise<Reply> {
     const meta = fns.get(name);
-    if (!meta || !IDENT.test(name)) throw err(404, "PGRST202", `Could not find the function public.${name}`);
+    if (!meta || !IDENT.test(name))
+      throw err(404, "PGRST202", `Could not find the function public.${name}`);
     const params: unknown[] = [];
     const named: string[] = [];
     for (const [k, v] of Object.entries((body ?? {}) as Record<string, unknown>)) {
       const a = meta.args.find((x) => x.name === k);
-      if (!a) throw err(404, "PGRST202", `Could not find the function public.${name} with argument ${k}`);
+      if (!a)
+        throw err(404, "PGRST202", `Could not find the function public.${name} with argument ${k}`);
       params.push(a.type === "jsonb" || a.type === "json" ? JSON.stringify(v) : v);
       named.push(`${ident(k)} => $${params.length}::${a.type}`);
     }
-    const res = await withActor(actor, (q) => q(`select * from public.${name}(${named.join(", ")})`, params));
+    const res = await withActor(actor, (q) =>
+      q(`select * from public.${name}(${named.join(", ")})`, params),
+    );
     if (meta.isVoid) return { status: 204, body: undefined };
     if (meta.retset) return { status: 200, body: res.rows };
     const scalar = res.fields.length === 1 && res.fields[0]!.name === name;
@@ -303,9 +357,11 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
         let total: number | undefined;
         if (wantsCount || method === "HEAD") {
           total = Number((await q(`select count(*) as n from public.${t}${w}`, params)).rows[0].n);
-          headers["Content-Range"] = `${offset ?? 0}-${Math.max(0, Number(offset ?? 0) + Number(limit ?? total) - 1)}/${total}`;
+          headers["Content-Range"] =
+            `${offset ?? 0}-${Math.max(0, Number(offset ?? 0) + Number(limit ?? total) - 1)}/${total}`;
         }
-        if (method === "HEAD") return { status: 200, body: undefined, headers: { "Content-Range": `*/${total}` } };
+        if (method === "HEAD")
+          return { status: 200, body: undefined, headers: { "Content-Range": `*/${total}` } };
         const res = await q(`select ${selectList(sp)} from public.${t}${w}${tail}`, params);
         return { status: 200, body: wantsObject ? oneRow(res.rows) : res.rows, headers };
       });
@@ -316,7 +372,15 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
       const keys = [...new Set(rows.flatMap((r) => Object.keys(r)))];
       const params: unknown[] = [];
       const values = rows
-        .map((r) => `(${keys.map((k) => { params.push(coerce(table, k, r[k] ?? null)); return `$${params.length}`; }).join(", ")})`)
+        .map(
+          (r) =>
+            `(${keys
+              .map((k) => {
+                params.push(coerce(table, k, r[k] ?? null));
+                return `$${params.length}`;
+              })
+              .join(", ")})`,
+        )
         .join(", ");
       let conflict = "";
       if (prefer.includes("resolution=merge-duplicates") && sp.get("on_conflict")) {
@@ -336,7 +400,12 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
         return `${ident(k)} = $${params.length}`;
       });
       const w = where(sp, params);
-      const res = await withActor(actor, (q) => q(`update public.${t} set ${sets.join(", ")}${w}${wantsRows ? ` returning ${selectList(sp)}` : ""}`, params));
+      const res = await withActor(actor, (q) =>
+        q(
+          `update public.${t} set ${sets.join(", ")}${w}${wantsRows ? ` returning ${selectList(sp)}` : ""}`,
+          params,
+        ),
+      );
       if (!wantsRows) return { status: 204, body: undefined };
       return { status: 200, body: wantsObject ? oneRow(res.rows) : res.rows };
     }
@@ -344,7 +413,9 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
     if (method === "DELETE") {
       const params: unknown[] = [];
       const w = where(sp, params);
-      const res = await withActor(actor, (q) => q(`delete from public.${t}${w}${wantsRows ? ` returning ${selectList(sp)}` : ""}`, params));
+      const res = await withActor(actor, (q) =>
+        q(`delete from public.${t}${w}${wantsRows ? ` returning ${selectList(sp)}` : ""}`, params),
+      );
       return wantsRows ? { status: 200, body: res.rows } : { status: 204, body: undefined };
     }
     throw err(405, "PGRST105", "method not allowed");
@@ -352,21 +423,44 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
 
   // --------------------------------------------------------------------- Auth
   async function userJson(id: string) {
-    const r = await pool.query("select id, email, email_confirmed_at, raw_user_meta_data, created_at, banned_until from auth.users where id = $1", [id]);
+    const r = await pool.query(
+      "select id, email, email_confirmed_at, raw_user_meta_data, created_at, banned_until from auth.users where id = $1",
+      [id],
+    );
     const u = r.rows[0];
-    if (!u) throw new HttpError(404, { code: 404, error_code: "user_not_found", msg: "User not found" });
+    if (!u)
+      throw new HttpError(404, { code: 404, error_code: "user_not_found", msg: "User not found" });
     return {
-      id: u.id, aud: "authenticated", role: "authenticated", email: u.email, email_confirmed_at: u.email_confirmed_at, phone: "",
-      confirmed_at: u.email_confirmed_at, last_sign_in_at: new Date().toISOString(), app_metadata: { provider: "google", providers: ["google"] },
-      user_metadata: u.raw_user_meta_data, identities: [], created_at: u.created_at, updated_at: u.created_at, banned_until: u.banned_until,
+      id: u.id,
+      aud: "authenticated",
+      role: "authenticated",
+      email: u.email,
+      email_confirmed_at: u.email_confirmed_at,
+      phone: "",
+      confirmed_at: u.email_confirmed_at,
+      last_sign_in_at: new Date().toISOString(),
+      app_metadata: { provider: "google", providers: ["google"] },
+      user_metadata: u.raw_user_meta_data,
+      identities: [],
+      created_at: u.created_at,
+      updated_at: u.created_at,
+      banned_until: u.banned_until,
     };
   }
 
-  async function auth(req: IncomingMessage, url: URL, body: unknown, actor: Actor | null): Promise<Reply> {
+  async function auth(
+    req: IncomingMessage,
+    url: URL,
+    body: unknown,
+    actor: Actor | null,
+  ): Promise<Reply> {
     const path = url.pathname.replace(/^\/auth\/v1/, "");
     if (req.method === "GET" && path === "/user") {
-      if (!actor?.sub) throw new HttpError(401, { code: 401, error_code: "bad_jwt", msg: "invalid JWT" });
-      const ban = await pool.query("select banned_until from auth.users where id = $1", [actor.sub]);
+      if (!actor?.sub)
+        throw new HttpError(401, { code: 401, error_code: "bad_jwt", msg: "invalid JWT" });
+      const ban = await pool.query("select banned_until from auth.users where id = $1", [
+        actor.sub,
+      ]);
       if (ban.rows[0]?.banned_until && new Date(ban.rows[0].banned_until) > new Date()) {
         throw new HttpError(403, { code: 403, error_code: "user_banned", msg: "User is banned" });
       }
@@ -375,17 +469,34 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
     if (req.method === "POST" && path === "/token") {
       const refresh = String((body as { refresh_token?: string })?.refresh_token ?? "");
       const id = refresh.replace(/^refresh-/, "");
-      if (!UUID.test(id)) throw new HttpError(400, { code: 400, error_code: "refresh_token_not_found", msg: "Invalid Refresh Token" });
+      if (!UUID.test(id))
+        throw new HttpError(400, {
+          code: 400,
+          error_code: "refresh_token_not_found",
+          msg: "Invalid Refresh Token",
+        });
       const user = await userJson(id);
-      return { status: 200, body: { access_token: makeAccessToken(id, user.email), token_type: "bearer", expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: refresh, user } };
+      return {
+        status: 200,
+        body: {
+          access_token: makeAccessToken(id, user.email),
+          token_type: "bearer",
+          expires_in: 3600,
+          expires_at: Math.floor(Date.now() / 1000) + 3600,
+          refresh_token: refresh,
+          user,
+        },
+      };
     }
     if (req.method === "POST" && path === "/logout") return { status: 204, body: undefined };
 
     const admin = path.match(/^\/admin\/users\/([^/]+)$/);
     if (admin) {
-      if (actor?.role !== "service_role") throw new HttpError(403, { code: 403, error_code: "not_admin", msg: "User not allowed" });
+      if (actor?.role !== "service_role")
+        throw new HttpError(403, { code: 403, error_code: "not_admin", msg: "User not allowed" });
       const id = admin[1]!;
-      if (!UUID.test(id)) throw new HttpError(400, { code: 400, error_code: "validation_failed", msg: "bad id" });
+      if (!UUID.test(id))
+        throw new HttpError(400, { code: 400, error_code: "validation_failed", msg: "bad id" });
       if (req.method === "GET") return { status: 200, body: await userJson(id) };
       if (req.method === "DELETE") {
         await userJson(id);
@@ -394,11 +505,19 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
       }
       if (req.method === "PUT") {
         const ban = (body as { ban_duration?: string })?.ban_duration;
-        if (ban) await pool.query("update auth.users set banned_until = case when $1 = 'none' then null else now() + interval '100 years' end where id = $2", [ban, id]);
+        if (ban)
+          await pool.query(
+            "update auth.users set banned_until = case when $1 = 'none' then null else now() + interval '100 years' end where id = $2",
+            [ban, id],
+          );
         return { status: 200, body: await userJson(id) };
       }
     }
-    throw new HttpError(404, { code: 404, error_code: "not_found", msg: `unsupported auth route ${req.method} ${path}` });
+    throw new HttpError(404, {
+      code: 404,
+      error_code: "not_found",
+      msg: `unsupported auth route ${req.method} ${path}`,
+    });
   }
 
   // ------------------------------------------------------------------- server
@@ -406,7 +525,8 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
     const origin = req.headers.origin ?? "*";
     const cors = {
       "Access-Control-Allow-Origin": origin,
-      "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info, prefer, range, accept, accept-profile, content-profile, x-supabase-api-version",
+      "Access-Control-Allow-Headers":
+        "authorization, apikey, content-type, x-client-info, prefer, range, accept, accept-profile, content-profile, x-supabase-api-version",
       "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, HEAD, OPTIONS",
       "Access-Control-Expose-Headers": "content-range",
       Vary: "Origin",
@@ -446,8 +566,20 @@ export async function startFakeSupabase(opts: FakeSupabaseOptions) {
     } catch (error) {
       if (error instanceof HttpError) return send(error.status, error.body);
       const e = error as { code?: string; message?: string; detail?: string; hint?: string };
-      const status = e.code === "42501" ? 403 : e.code === "23505" || e.code === "23503" ? 409 : e.code === "P0002" ? 404 : 400;
-      return send(status, { code: e.code ?? "XX000", message: e.message ?? "error", details: e.detail ?? null, hint: e.hint ?? null });
+      const status =
+        e.code === "42501"
+          ? 403
+          : e.code === "23505" || e.code === "23503"
+            ? 409
+            : e.code === "P0002"
+              ? 404
+              : 400;
+      return send(status, {
+        code: e.code ?? "XX000",
+        message: e.message ?? "error",
+        details: e.detail ?? null,
+        hint: e.hint ?? null,
+      });
     }
   });
 

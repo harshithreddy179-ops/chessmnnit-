@@ -11,7 +11,8 @@ import { Client } from "pg";
 export const TEMPLATE_DB = "mnnit_test_template";
 
 export function adminUrl(db = "postgres"): string {
-  const base = process.env.TEST_DATABASE_ADMIN_URL ?? "postgres://postgres:postgres@127.0.0.1:5432/postgres";
+  const base =
+    process.env.TEST_DATABASE_ADMIN_URL ?? "postgres://postgres:postgres@127.0.0.1:5432/postgres";
   const url = new URL(base);
   url.pathname = `/${db}`;
   return url.toString();
@@ -39,7 +40,9 @@ export async function createMigratedDatabase(name: string, root = process.cwd())
   await db.connect();
   await db.query(readFileSync(join(root, "tests/db/supabase-shim.sql"), "utf8"));
   const dir = join(root, "supabase/migrations");
-  for (const file of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
+  for (const file of readdirSync(dir)
+    .filter((f) => f.endsWith(".sql"))
+    .sort()) {
     try {
       await db.query(readFileSync(join(dir, file), "utf8"));
     } catch (error) {

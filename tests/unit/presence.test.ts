@@ -5,15 +5,26 @@ import { formatPercent, formatRelative, initials } from "@/lib/utils";
 
 describe("presence aggregation", () => {
   it("treats a user as online while any tab is connected", () => {
-    const state: PresenceState = { u1: [{ status: "busy" }], u2: [], u3: [{ status: "available" }, { status: "available" }] };
+    const state: PresenceState = {
+      u1: [{ status: "busy" }],
+      u2: [],
+      u3: [{ status: "available" }, { status: "available" }],
+    };
     const agg = aggregatePresence(state);
     expect([...agg.keys()].sort()).toEqual(["u1", "u3"]);
   });
 
   it("handles multiple tabs and devices: available wins over busy", () => {
-    const agg = aggregatePresence({ u1: [{ status: "busy", tab_id: "a" }, { status: "available", tab_id: "b" }] });
+    const agg = aggregatePresence({
+      u1: [
+        { status: "busy", tab_id: "a" },
+        { status: "available", tab_id: "b" },
+      ],
+    });
     expect(agg.get("u1")).toBe("available");
-    expect(aggregatePresence({ u1: [{ status: "busy" }, { status: "busy" }] }).get("u1")).toBe("busy");
+    expect(aggregatePresence({ u1: [{ status: "busy" }, { status: "busy" }] }).get("u1")).toBe(
+      "busy",
+    );
   });
 
   it("goes offline only when the last tab closes", () => {
@@ -70,17 +81,47 @@ describe("rating history", () => {
   const pt = (t: string, rating: number) => ({ t, rating });
   it("needs three points over two different days before charting", () => {
     expect(hasEnoughHistory([])).toBe(false);
-    expect(hasEnoughHistory([pt("2026-10-01T10:00:00Z", 1500), pt("2026-10-02T10:00:00Z", 1510)])).toBe(false);
-    expect(hasEnoughHistory([pt("2026-10-01T10:00:00Z", 1500), pt("2026-10-01T11:00:00Z", 1505), pt("2026-10-01T12:00:00Z", 1510)])).toBe(false);
-    expect(hasEnoughHistory([pt("2026-10-01T10:00:00Z", 1500), pt("2026-10-01T11:00:00Z", 1505), pt("2026-10-03T12:00:00Z", 1510)])).toBe(true);
+    expect(
+      hasEnoughHistory([pt("2026-10-01T10:00:00Z", 1500), pt("2026-10-02T10:00:00Z", 1510)]),
+    ).toBe(false);
+    expect(
+      hasEnoughHistory([
+        pt("2026-10-01T10:00:00Z", 1500),
+        pt("2026-10-01T11:00:00Z", 1505),
+        pt("2026-10-01T12:00:00Z", 1510),
+      ]),
+    ).toBe(false);
+    expect(
+      hasEnoughHistory([
+        pt("2026-10-01T10:00:00Z", 1500),
+        pt("2026-10-01T11:00:00Z", 1505),
+        pt("2026-10-03T12:00:00Z", 1510),
+      ]),
+    ).toBe(true);
   });
 
   it("maps points into the viewBox in time order and never collapses a flat series", () => {
-    const g = chartGeometry([pt("2026-10-03T00:00:00Z", 1520), pt("2026-10-01T00:00:00Z", 1500), pt("2026-10-02T00:00:00Z", 1500)], 300, 100);
+    const g = chartGeometry(
+      [
+        pt("2026-10-03T00:00:00Z", 1520),
+        pt("2026-10-01T00:00:00Z", 1500),
+        pt("2026-10-02T00:00:00Z", 1500),
+      ],
+      300,
+      100,
+    );
     expect(g.dots.map((d) => d.rating)).toEqual([1500, 1500, 1520]);
     expect(g.dots[0]!.x).toBeLessThan(g.dots[2]!.x);
     expect(g.dots.every((d) => d.x >= 0 && d.x <= 300 && d.y >= 0 && d.y <= 100)).toBe(true);
-    const flat = chartGeometry([pt("2026-10-01T00:00:00Z", 1500), pt("2026-10-02T00:00:00Z", 1500), pt("2026-10-03T00:00:00Z", 1500)], 300, 100);
+    const flat = chartGeometry(
+      [
+        pt("2026-10-01T00:00:00Z", 1500),
+        pt("2026-10-02T00:00:00Z", 1500),
+        pt("2026-10-03T00:00:00Z", 1500),
+      ],
+      300,
+      100,
+    );
     expect(flat.max - flat.min).toBeGreaterThan(0);
     expect(Number.isFinite(flat.dots[0]!.y)).toBe(true);
   });

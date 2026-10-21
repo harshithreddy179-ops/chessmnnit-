@@ -67,7 +67,12 @@ export async function startFakeChessCom(port = 0): Promise<FakeChessCom> {
   const stats = new Map<string, Record<string, unknown>>();
   const archives = new Map<string, unknown[]>(); // key: `${username}|${YYYY/MM}`
   const versions = new Map<string, number>();
-  const failures: { pattern: RegExp; status: number; left: number; headers: Record<string, string> }[] = [];
+  const failures: {
+    pattern: RegExp;
+    status: number;
+    left: number;
+    headers: Record<string, string>;
+  }[] = [];
   let inFlight = 0;
 
   const state: FakeChessCom = {
@@ -86,9 +91,13 @@ export async function startFakeChessCom(port = 0): Promise<FakeChessCom> {
       const d = `${started.getUTCFullYear()}.${pad(started.getUTCMonth() + 1)}.${pad(started.getUTCDate())}`;
       const t = `${pad(started.getUTCHours())}:${pad(started.getUTCMinutes())}:${pad(started.getUTCSeconds())}`;
       const game = {
-        url, uuid,
+        url,
+        uuid,
         pgn: `[Event "Live Chess"]\n[White "${g.white}"]\n[Black "${g.black}"]\n[UTCDate "${d}"]\n[UTCTime "${t}"]\n\n1. e4 e5`,
-        time_control: g.timeControl ?? "600", time_class: g.timeClass ?? "rapid", rules: g.rules ?? "chess", rated: g.rated ?? true,
+        time_control: g.timeControl ?? "600",
+        time_class: g.timeClass ?? "rapid",
+        rules: g.rules ?? "chess",
+        rated: g.rated ?? true,
         end_time: Math.floor(g.endedAt.getTime() / 1000),
         white: { username: g.white, rating: 1500, result: g.whiteResult ?? wr, uuid: randomUUID() },
         black: { username: g.black, rating: 1500, result: g.blackResult ?? br, uuid: randomUUID() },
@@ -102,7 +111,8 @@ export async function startFakeChessCom(port = 0): Promise<FakeChessCom> {
       }
       return { url, uuid };
     },
-    fail: (pattern, status, times = 1, headers = {}) => failures.push({ pattern, status, left: times, headers }),
+    fail: (pattern, status, times = 1, headers = {}) =>
+      failures.push({ pattern, status, left: times, headers }),
     clearFailures: () => void (failures.length = 0),
     clearGames() {
       archives.clear();
@@ -116,7 +126,12 @@ export async function startFakeChessCom(port = 0): Promise<FakeChessCom> {
     close: () => new Promise((resolve) => server.close(() => resolve())),
   };
 
-  const send = (res: ServerResponse, status: number, body?: unknown, headers: Record<string, string> = {}) => {
+  const send = (
+    res: ServerResponse,
+    status: number,
+    body?: unknown,
+    headers: Record<string, string> = {},
+  ) => {
     res.writeHead(status, { "content-type": "application/json", ...headers });
     res.end(body === undefined ? undefined : JSON.stringify(body));
   };
@@ -138,23 +153,38 @@ export async function startFakeChessCom(port = 0): Promise<FakeChessCom> {
       let m = path.match(/^\/player\/([^/]+)\/games\/(\d{4})\/(\d{2})$/);
       if (m) {
         const key = `${m[1]!.toLowerCase()}|${m[2]}/${m[3]}`;
-        if (!profiles.has(m[1]!.toLowerCase())) return send(res, 404, { code: 0, message: "not found" });
+        if (!profiles.has(m[1]!.toLowerCase()))
+          return send(res, 404, { code: 0, message: "not found" });
         const version = versions.get(key) ?? 0;
         const etag = `"${key}:${version}"`;
         if (req.headers["if-none-match"] === etag) {
           state.conditionalHits++;
           return send(res, 304, undefined, { etag });
         }
-        return send(res, 200, { games: archives.get(key) ?? [] }, { etag, "last-modified": "Wed, 21 Oct 2026 07:28:00 GMT" });
+        return send(
+          res,
+          200,
+          { games: archives.get(key) ?? [] },
+          { etag, "last-modified": "Wed, 21 Oct 2026 07:28:00 GMT" },
+        );
       }
       m = path.match(/^\/player\/([^/]+)\/games\/archives$/);
       if (m) return send(res, 200, { archives: [] });
       m = path.match(/^\/player\/([^/]+)\/stats$/);
-      if (m) return stats.has(m[1]!.toLowerCase()) ? send(res, 200, stats.get(m[1]!.toLowerCase())) : send(res, 404, {});
+      if (m)
+        return stats.has(m[1]!.toLowerCase())
+          ? send(res, 200, stats.get(m[1]!.toLowerCase()))
+          : send(res, 404, {});
       m = path.match(/^\/player\/([^/]+)$/);
       if (m) {
         const p = profiles.get(m[1]!.toLowerCase());
-        return p ? send(res, 200, { "@id": `https://api.chess.com/pub/player/${p.username}`, url: `https://www.chess.com/member/${p.username}`, ...p }) : send(res, 404, {});
+        return p
+          ? send(res, 200, {
+              "@id": `https://api.chess.com/pub/player/${p.username}`,
+              url: `https://www.chess.com/member/${p.username}`,
+              ...p,
+            })
+          : send(res, 404, {});
       }
       send(res, 404, {});
     } finally {

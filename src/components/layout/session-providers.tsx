@@ -9,7 +9,10 @@ import { getAppContext } from "@/server/auth";
 export async function SessionProviders({ children }: { children: React.ReactNode }) {
   const ctx = await getAppContext();
   if (!ctx) return <>{children}</>;
-  const { count } = await ctx.supabase.from("notifications").select("id", { count: "exact", head: true }).is("read_at", null);
+  const { count } = await ctx.supabase
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .is("read_at", null);
   return (
     <PresenceProvider userId={ctx.user.id} initialMode={ctx.settings?.presence_mode ?? "available"}>
       <NotificationsProvider userId={ctx.user.id} initialUnread={count ?? 0}>

@@ -20,7 +20,9 @@ export function isValidChessUsername(input: string): boolean {
 export function parseChessUsername(input: string): string | null {
   const raw = input.trim();
   if (!raw) return null;
-  const link = raw.match(/^(?:https?:\/\/)?(?:www\.)?chess\.com\/(?:member|players?)\/([^/?#\s]+)\/?(?:[?#].*)?$/i);
+  const link = raw.match(
+    /^(?:https?:\/\/)?(?:www\.)?chess\.com\/(?:member|players?)\/([^/?#\s]+)\/?(?:[?#].*)?$/i,
+  );
   const candidate = normalizeChessUsername(link ? decodeURIComponent(link[1]!) : raw);
   return isValidChessUsername(candidate) ? candidate : null;
 }

@@ -3,10 +3,25 @@
 import { Bell, BellRing } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { api } from "@/lib/api-client";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { formatRelative } from "@/lib/utils";
@@ -33,7 +48,12 @@ export const useNotifications = () => useContext(Ctx);
 export function notificationHref(n: Pick<NotificationItem, "data" | "type">): string {
   const challengeId = n.data?.challenge_id;
   if (typeof challengeId === "string") return `/challenges/${challengeId}`;
-  if (n.type === "verification_result" || n.type === "eligibility_result" || n.type === "recovery_decision") return "/settings";
+  if (
+    n.type === "verification_result" ||
+    n.type === "eligibility_result" ||
+    n.type === "recovery_decision"
+  )
+    return "/settings";
   return "/notifications";
 }
 
@@ -42,7 +62,15 @@ export function notificationHref(n: Pick<NotificationItem, "data" | "type">): st
  * client only ever receives its own notifications and challenges it takes part in.
  * Without Realtime the app still works — the notification centre reads from the database.
  */
-export function NotificationsProvider({ userId, initialUnread, children }: { userId: string; initialUnread: number; children: React.ReactNode }) {
+export function NotificationsProvider({
+  userId,
+  initialUnread,
+  children,
+}: {
+  userId: string;
+  initialUnread: number;
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const [unread, setUnread] = useState(initialUnread);
   const [live, setLive] = useState<NotificationsValue["live"]>("connecting");
@@ -61,13 +89,29 @@ export function NotificationsProvider({ userId, initialUnread, children }: { use
     }
     const channel = supabase
       .channel(`inbox:${userId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` }, (payload) => {
-        const n = payload.new as NotificationItem;
-        setUnread((c) => c + 1);
-        toast(n.title, { description: n.body || undefined, action: { label: "Open", onClick: () => router.push(notificationHref(n)) } });
-        scheduleRefresh();
-      })
-      .on("postgres_changes", { event: "*", schema: "public", table: "challenges" }, scheduleRefresh)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const n = payload.new as NotificationItem;
+          setUnread((c) => c + 1);
+          toast(n.title, {
+            description: n.body || undefined,
+            action: { label: "Open", onClick: () => router.push(notificationHref(n)) },
+          });
+          scheduleRefresh();
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "challenges" },
+        scheduleRefresh,
+      )
       .subscribe((status) => {
         setLive(status === "SUBSCRIBED" ? "live" : status === "CLOSED" ? "connecting" : "offline");
       });
@@ -97,7 +141,11 @@ export function NotificationBell() {
   const load = async () => {
     const supabase = getBrowserSupabase();
     if (!supabase) return setItems([]);
-    const { data } = await supabase.from("notifications").select("id,type,title,body,data,read_at,created_at").order("created_at", { ascending: false }).limit(6);
+    const { data } = await supabase
+      .from("notifications")
+      .select("id,type,title,body,data,read_at,created_at")
+      .order("created_at", { ascending: false })
+      .limit(6);
     setItems((data ?? []) as NotificationItem[]);
   };
 
@@ -105,7 +153,12 @@ export function NotificationBell() {
   return (
     <DropdownMenu onOpenChange={(open) => open && void load()}>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} className="relative">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"}
+          className="relative"
+        >
           {unread ? <BellRing aria-hidden /> : <Bell aria-hidden />}
           {unread ? (
             <span className="tabular absolute -top-0.5 -right-0.5 grid min-w-4 place-items-center rounded-full bg-primary px-1 text-[10px] leading-4 font-semibold text-primary-foreground">
@@ -117,16 +170,30 @@ export function NotificationBell() {
       <DropdownMenuContent className="w-80">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Notifications</span>
-          <span className="text-[11px]">{ctx?.live === "live" ? "Live" : ctx?.live === "connecting" ? "Connecting…" : "Live updates paused"}</span>
+          <span className="text-[11px]">
+            {ctx?.live === "live"
+              ? "Live"
+              : ctx?.live === "connecting"
+                ? "Connecting…"
+                : "Live updates paused"}
+          </span>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
-        {items === null ? <p className="px-3 py-4 text-sm text-muted-foreground">Loading…</p> : null}
-        {items?.length === 0 ? <p className="px-3 py-4 text-sm text-muted-foreground">Nothing yet. Challenges and results will show up here.</p> : null}
+        {items === null ? (
+          <p className="px-3 py-4 text-sm text-muted-foreground">Loading…</p>
+        ) : null}
+        {items?.length === 0 ? (
+          <p className="px-3 py-4 text-sm text-muted-foreground">
+            Nothing yet. Challenges and results will show up here.
+          </p>
+        ) : null}
         {items?.map((n) => (
           <DropdownMenuItem key={n.id} asChild>
             <Link href={notificationHref(n)} className="grid gap-0.5">
               <span className="flex items-center gap-2 text-sm font-medium">
-                {!n.read_at ? <span aria-label="unread" className="size-1.5 rounded-full bg-primary" /> : null}
+                {!n.read_at ? (
+                  <span aria-label="unread" className="size-1.5 rounded-full bg-primary" />
+                ) : null}
                 {n.title}
               </span>
               <span className="text-xs text-muted-foreground">{formatRelative(n.created_at)}</span>

@@ -12,7 +12,8 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { Client } from "pg";
 
 const OUT = "src/lib/database.types.ts";
-const url = process.env.LOCAL_DATABASE_URL ?? "postgres://postgres:postgres@127.0.0.1:5432/mnnit_dev";
+const url =
+  process.env.LOCAL_DATABASE_URL ?? "postgres://postgres:postgres@127.0.0.1:5432/mnnit_dev";
 const check = process.argv.includes("--check");
 
 interface PgType {
@@ -23,10 +24,29 @@ interface PgType {
 }
 
 const SCALARS: Record<string, string> = {
-  text: "string", varchar: "string", bpchar: "string", citext: "string", uuid: "string", name: "string",
-  int2: "number", int4: "number", int8: "number", numeric: "number", float4: "number", float8: "number", oid: "number",
-  bool: "boolean", json: "Json", jsonb: "Json", bytea: "string",
-  timestamptz: "string", timestamp: "string", date: "string", time: "string", timetz: "string", interval: "string",
+  text: "string",
+  varchar: "string",
+  bpchar: "string",
+  citext: "string",
+  uuid: "string",
+  name: "string",
+  int2: "number",
+  int4: "number",
+  int8: "number",
+  numeric: "number",
+  float4: "number",
+  float8: "number",
+  oid: "number",
+  bool: "boolean",
+  json: "Json",
+  jsonb: "Json",
+  bytea: "string",
+  timestamptz: "string",
+  timestamp: "string",
+  date: "string",
+  time: "string",
+  timetz: "string",
+  interval: "string",
 };
 
 async function main() {
@@ -34,7 +54,11 @@ async function main() {
   await db.connect();
 
   const types = new Map<number, PgType>();
-  for (const r of (await db.query("select oid::int as oid, typname, typtype, typcategory, typelem::int as typelem from pg_type")).rows) {
+  for (const r of (
+    await db.query(
+      "select oid::int as oid, typname, typtype, typcategory, typelem::int as typelem from pg_type",
+    )
+  ).rows) {
     types.set(r.oid, r);
   }
   const enums = new Map<string, string[]>();
@@ -69,7 +93,9 @@ async function main() {
   for (const c of cols) tables.set(c.relname, [...(tables.get(c.relname) ?? []), c]);
 
   const tableTs = [...tables.entries()].map(([name, columns]) => {
-    const row = columns.map((c) => `          ${c.attname}: ${tsType(c.typid)}${c.attnotnull ? "" : " | null"}`).join("\n");
+    const row = columns
+      .map((c) => `          ${c.attname}: ${tsType(c.typid)}${c.attnotnull ? "" : " | null"}`)
+      .join("\n");
     const insert = columns
       .filter((c) => !c.attgenerated && c.attidentity !== "a")
       .map((c) => {

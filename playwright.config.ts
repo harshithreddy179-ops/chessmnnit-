@@ -3,7 +3,9 @@ import { defineConfig } from "@playwright/test";
 import { appEnv, appUrl, E2E } from "./tests/e2e/env";
 
 // Use the system / pre-installed Chromium when present (no browser download needed).
-const chromium = process.env.PLAYWRIGHT_CHROMIUM_PATH ?? (existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
+const chromium =
+  process.env.PLAYWRIGHT_CHROMIUM_PATH ??
+  (existsSync("/opt/pw-browsers/chromium") ? "/opt/pw-browsers/chromium" : undefined);
 
 export default defineConfig({
   testDir: "tests/e2e",

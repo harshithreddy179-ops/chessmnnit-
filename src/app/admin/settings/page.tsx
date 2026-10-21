@@ -12,8 +12,13 @@ export default async function AdminSettings() {
   const { data } = await ctx.supabase.from("app_settings").select("*").order("key");
   return (
     <div className="grid gap-6">
-      <Alert variant="warning" title="These change how every player is scored and matched">Changes are audited. Scoring settings (points, Elo) apply the next time statistics are recomputed, which happens whenever a match result changes.</Alert>
-      {data?.map((s) => <SettingForm key={s.key} settingKey={s.key} value={s.value} description={s.description} />)}
+      <Alert variant="warning" title="These change how every player is scored and matched">
+        Changes are audited. Scoring settings (points, Elo) apply the next time statistics are
+        recomputed, which happens whenever a match result changes.
+      </Alert>
+      {data?.map((s) => (
+        <SettingForm key={s.key} settingKey={s.key} value={s.value} description={s.description} />
+      ))}
     </div>
   );
 }

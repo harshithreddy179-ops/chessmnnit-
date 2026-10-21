@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { currentMonth, deriveWinner, filterMemberGames, monthsBetween, normalizeArchiveGame } from "@/lib/chess/games";
+import {
+  currentMonth,
+  deriveWinner,
+  filterMemberGames,
+  monthsBetween,
+  normalizeArchiveGame,
+} from "@/lib/chess/games";
 import { parseChessUsername } from "@/lib/chess/username";
 
 // Fixtures follow the documented shape of /pub/player/{username}/games/{YYYY}/{MM}.
@@ -77,43 +83,87 @@ describe("normalizeArchiveGame", () => {
   it("drops entries it cannot trust, with a reason, without throwing", () => {
     expect(normalizeArchiveGame(null, "2026/10").skipped).toBe("invalid_shape");
     expect(normalizeArchiveGame({ url: 5 }, "2026/10").skipped).toBe("invalid_shape");
-    expect(normalizeArchiveGame(rawGame({ url: "https://evil.example/game/live/1" }), "2026/10").skipped).toBe("unexpected_url");
-    expect(normalizeArchiveGame(rawGame({ end_time: undefined }), "2026/10").skipped).toBe("missing_end_time");
-    expect(normalizeArchiveGame(rawGame({ white: { username: "bad name!" } }), "2026/10").skipped).toBe("invalid_players");
-    expect(normalizeArchiveGame(rawGame({ black: { username: "ALICE_S", result: "x" } }), "2026/10").skipped).toBe("invalid_players");
+    expect(
+      normalizeArchiveGame(rawGame({ url: "https://evil.example/game/live/1" }), "2026/10").skipped,
+    ).toBe("unexpected_url");
+    expect(normalizeArchiveGame(rawGame({ end_time: undefined }), "2026/10").skipped).toBe(
+      "missing_end_time",
+    );
+    expect(
+      normalizeArchiveGame(rawGame({ white: { username: "bad name!" } }), "2026/10").skipped,
+    ).toBe("invalid_players");
+    expect(
+      normalizeArchiveGame(rawGame({ black: { username: "ALICE_S", result: "x" } }), "2026/10")
+        .skipped,
+    ).toBe("invalid_players");
   });
 
   it("keeps variants and unknown time classes visible instead of coercing them", () => {
-    expect(normalizeArchiveGame(rawGame({ rules: "chess960" }), "2026/10").game?.rules).toBe("chess960");
-    expect(normalizeArchiveGame(rawGame({ time_class: "ultra" }), "2026/10").game?.time_class).toBeNull();
-    expect(normalizeArchiveGame(rawGame({ time_control: undefined }), "2026/10").game?.time_control).toBeNull();
+    expect(normalizeArchiveGame(rawGame({ rules: "chess960" }), "2026/10").game?.rules).toBe(
+      "chess960",
+    );
+    expect(
+      normalizeArchiveGame(rawGame({ time_class: "ultra" }), "2026/10").game?.time_class,
+    ).toBeNull();
+    expect(
+      normalizeArchiveGame(rawGame({ time_control: undefined }), "2026/10").game?.time_control,
+    ).toBeNull();
   });
 
   it("only trusts a PGN start time that is plausible", () => {
     const ended = Date.UTC(2026, 9, 20, 12, 10, 0) / 1000;
-    expect(normalizeArchiveGame(rawGame({ pgn: pgn().replace("12:00:00", "14:00:00") }), "2026/10").game?.started_at).toBeNull(); // after the end
-    expect(normalizeArchiveGame(rawGame({ pgn: "[Event \"x\"]\n1. e4" }), "2026/10").game?.started_at).toBeNull();
-    expect(normalizeArchiveGame(rawGame({ time_class: "daily", end_time: ended }), "2026/10").game?.started_at).toBeNull();
-    expect(normalizeArchiveGame(rawGame({ pgn: pgn().replace("2026.10.20", "2026.10.01") }), "2026/10").game?.started_at).toBeNull(); // 19 days: implausible for a live game
+    expect(
+      normalizeArchiveGame(rawGame({ pgn: pgn().replace("12:00:00", "14:00:00") }), "2026/10").game
+        ?.started_at,
+    ).toBeNull(); // after the end
+    expect(
+      normalizeArchiveGame(rawGame({ pgn: '[Event "x"]\n1. e4' }), "2026/10").game?.started_at,
+    ).toBeNull();
+    expect(
+      normalizeArchiveGame(rawGame({ time_class: "daily", end_time: ended }), "2026/10").game
+        ?.started_at,
+    ).toBeNull();
+    expect(
+      normalizeArchiveGame(rawGame({ pgn: pgn().replace("2026.10.20", "2026.10.01") }), "2026/10")
+        .game?.started_at,
+    ).toBeNull(); // 19 days: implausible for a live game
   });
 
   it("ignores a malformed uuid rather than storing it", () => {
-    expect(normalizeArchiveGame(rawGame({ uuid: "not-a-uuid" }), "2026/10").game?.game_uuid).toBeNull();
+    expect(
+      normalizeArchiveGame(rawGame({ uuid: "not-a-uuid" }), "2026/10").game?.game_uuid,
+    ).toBeNull();
   });
 });
 
 describe("archive helpers", () => {
   it("keeps only games between two linked members", () => {
-    const mk = (w: string, b: string) => normalizeArchiveGame(rawGame({ white: { username: w, result: "win" }, black: { username: b, result: "resigned" } }), "2026/10").game!;
+    const mk = (w: string, b: string) =>
+      normalizeArchiveGame(
+        rawGame({
+          white: { username: w, result: "win" },
+          black: { username: b, result: "resigned" },
+        }),
+        "2026/10",
+      ).game!;
     const members = new Set(["alice_s", "bob_s"]);
-    const kept = filterMemberGames([mk("alice_s", "bob_s"), mk("alice_s", "stranger_x"), mk("stranger_x", "other_y")], members);
+    const kept = filterMemberGames(
+      [mk("alice_s", "bob_s"), mk("alice_s", "stranger_x"), mk("stranger_x", "other_y")],
+      members,
+    );
     expect(kept).toHaveLength(1);
   });
 
   it("lists every archive month in a range, across year boundaries", () => {
-    expect(monthsBetween(new Date("2026-10-31T23:00:00Z"), new Date("2026-10-31T23:30:00Z"))).toEqual(["2026/10"]);
-    expect(monthsBetween(new Date("2026-11-20T00:00:00Z"), new Date("2027-02-02T00:00:00Z"))).toEqual(["2026/11", "2026/12", "2027/01", "2027/02"]);
-    expect(monthsBetween(new Date("2026-12-01T00:00:00Z"), new Date("2026-01-01T00:00:00Z"))).toEqual([]);
+    expect(
+      monthsBetween(new Date("2026-10-31T23:00:00Z"), new Date("2026-10-31T23:30:00Z")),
+    ).toEqual(["2026/10"]);
+    expect(
+      monthsBetween(new Date("2026-11-20T00:00:00Z"), new Date("2027-02-02T00:00:00Z")),
+    ).toEqual(["2026/11", "2026/12", "2027/01", "2027/02"]);
+    expect(
+      monthsBetween(new Date("2026-12-01T00:00:00Z"), new Date("2026-01-01T00:00:00Z")),
+    ).toEqual([]);
     expect(currentMonth(new Date("2026-03-09T00:00:00Z"))).toBe("2026/03");
   });
 });
@@ -126,7 +176,16 @@ describe("parseChessUsername", () => {
     expect(parseChessUsername("https://www.chess.com/member/Magnus_C?tab=games")).toBe("magnus_c");
   });
   it("rejects anything that is not a valid username", () => {
-    for (const bad of ["", "ab", "has space", "x".repeat(26), "semi;colon", "https://evil.example/member/abc", "../etc/passwd", "<script>"]) {
+    for (const bad of [
+      "",
+      "ab",
+      "has space",
+      "x".repeat(26),
+      "semi;colon",
+      "https://evil.example/member/abc",
+      "../etc/passwd",
+      "<script>",
+    ]) {
       expect(parseChessUsername(bad)).toBeNull();
     }
   });

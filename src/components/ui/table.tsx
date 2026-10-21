@@ -3,8 +3,12 @@ import { cn } from "@/lib/utils";
 
 export function Table({ className, ...props }: React.ComponentProps<"table">) {
   return (
-    <div className="scrollbar-thin w-full overflow-x-auto" data-slot="table-container">
-      <table data-slot="table" className={cn("w-full caption-bottom text-sm", className)} {...props} />
+    <div className="w-full scrollbar-thin overflow-x-auto" data-slot="table-container">
+      <table
+        data-slot="table"
+        className={cn("w-full caption-bottom text-sm", className)}
+        {...props}
+      />
     </div>
   );
 }
@@ -18,7 +22,9 @@ export function TableBody({ className, ...props }: React.ComponentProps<"tbody">
 }
 
 export function TableRow({ className, ...props }: React.ComponentProps<"tr">) {
-  return <tr className={cn("border-b transition-colors hover:bg-muted/50", className)} {...props} />;
+  return (
+    <tr className={cn("border-b transition-colors hover:bg-muted/50", className)} {...props} />
+  );
 }
 
 export function TableHead({ className, ...props }: React.ComponentProps<"th">) {

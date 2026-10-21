@@ -10,7 +10,12 @@ import { E2E } from "./env";
 async function main() {
   await createMigratedDatabase(E2E.dbName);
   const pool = new Pool({ connectionString: adminUrl(E2E.dbName), max: 16 });
-  await startFakeSupabase({ pool, port: E2E.supabasePort, publishableKey: E2E.publishableKey, secretKey: E2E.secretKey });
+  await startFakeSupabase({
+    pool,
+    port: E2E.supabasePort,
+    publishableKey: E2E.publishableKey,
+    secretKey: E2E.secretKey,
+  });
   console.log(`[e2e] Supabase stand-in ready on :${E2E.supabasePort} (database ${E2E.dbName})`);
   const stop = () => void pool.end().finally(() => process.exit(0));
   process.on("SIGTERM", stop);

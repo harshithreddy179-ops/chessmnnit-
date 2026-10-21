@@ -48,23 +48,50 @@ describe("structural guarantees (these fail if a future migration regresses)", (
     ).rows;
 
     const anonOk = new Set([
-      "get_leaderboard", "get_player_directory", "get_recent_matches", "get_public_summary",
-      "normalize_chess_username", "is_valid_chess_username",
+      "get_leaderboard",
+      "get_player_directory",
+      "get_recent_matches",
+      "get_public_summary",
+      "normalize_chess_username",
+      "is_valid_chess_username",
     ]);
     const authedOk = new Set([
       ...anonOk,
-      "consume_rate_limit", "claim_eligibility", "request_eligibility_review", "start_chess_claim",
-      "cancel_chess_claim", "submit_claim_for_review", "complete_onboarding", "request_account_recovery",
+      "consume_rate_limit",
+      "claim_eligibility",
+      "request_eligibility_review",
+      "start_chess_claim",
+      "cancel_chess_claim",
+      "submit_claim_for_review",
+      "complete_onboarding",
+      "request_account_recovery",
       "open_match_dispute",
-      "admin_unlink_chess_account", "admin_resolve_recovery", "admin_add_eligibility", "admin_remove_eligibility",
-      "admin_set_user_eligibility", "admin_review_eligibility_request", "admin_review_claim",
-      "admin_set_account_status", "admin_set_role", "admin_resolve_challenge_with_game",
-      "admin_record_manual_result", "admin_void_challenge", "admin_correct_match", "admin_retry_challenge_sync",
-      "admin_resolve_dispute", "admin_update_setting", "admin_overview", "admin_retry_player_sync",
+      "admin_unlink_chess_account",
+      "admin_resolve_recovery",
+      "admin_add_eligibility",
+      "admin_remove_eligibility",
+      "admin_set_user_eligibility",
+      "admin_review_eligibility_request",
+      "admin_review_claim",
+      "admin_set_account_status",
+      "admin_set_role",
+      "admin_resolve_challenge_with_game",
+      "admin_record_manual_result",
+      "admin_void_challenge",
+      "admin_correct_match",
+      "admin_retry_challenge_sync",
+      "admin_resolve_dispute",
+      "admin_update_setting",
+      "admin_overview",
+      "admin_retry_player_sync",
     ]);
 
-    const unexpectedAnon = rows.filter((r) => r.anon && !anonOk.has(r.proname)).map((r) => r.proname);
-    const unexpectedAuthed = rows.filter((r) => r.authed && !authedOk.has(r.proname)).map((r) => r.proname);
+    const unexpectedAnon = rows
+      .filter((r) => r.anon && !anonOk.has(r.proname))
+      .map((r) => r.proname);
+    const unexpectedAuthed = rows
+      .filter((r) => r.authed && !authedOk.has(r.proname))
+      .map((r) => r.proname);
     const missing = [...authedOk].filter((n) => !rows.some((r) => r.proname === n && r.authed));
     expect(unexpectedAnon).toEqual([]);
     expect(unexpectedAuthed).toEqual([]);
@@ -78,8 +105,14 @@ describe("structural guarantees (these fail if a future migration regresses)", (
     );
     const tables = [...new Set(r.rows.map((x) => x.table_name))].sort();
     expect(tables).toEqual([
-      "app_settings", "chess_account_links", "chess_rating_history", "chess_ratings", "college_matches",
-      "player_stats", "profiles", "supported_time_controls",
+      "app_settings",
+      "chess_account_links",
+      "chess_rating_history",
+      "chess_ratings",
+      "college_matches",
+      "player_stats",
+      "profiles",
+      "supported_time_controls",
     ]);
     expect(r.rows.every((x) => x.privilege_type === "SELECT")).toBe(true);
   });
@@ -88,9 +121,23 @@ describe("structural guarantees (these fail if a future migration regresses)", (
 describe("anonymous visitors", () => {
   it("cannot read any private table", async () => {
     for (const t of [
-      "student_eligibility", "eligibility_requests", "chess_link_claims", "chess_link_history", "account_recovery_requests",
-      "notifications", "profile_settings", "admin_roles", "audit_logs", "job_runs", "imported_chess_games",
-      "chess_archive_state", "challenges", "challenge_events", "match_sync_attempts", "match_disputes", "chess_sync_state",
+      "student_eligibility",
+      "eligibility_requests",
+      "chess_link_claims",
+      "chess_link_history",
+      "account_recovery_requests",
+      "notifications",
+      "profile_settings",
+      "admin_roles",
+      "audit_logs",
+      "job_runs",
+      "imported_chess_games",
+      "chess_archive_state",
+      "challenges",
+      "challenge_events",
+      "match_sync_attempts",
+      "match_disputes",
+      "chess_sync_state",
     ]) {
       const err = await sqlError(db.anon.query(`select * from public.${t} limit 1`));
       expect(err.code, `anon should not read ${t}`).toBe("42501");
@@ -117,27 +164,49 @@ describe("anonymous visitors", () => {
 
 describe("profiles", () => {
   it("lets a user edit only their display fields", async () => {
-    const ok = await db.as(alice.id).query("update public.profiles set display_name = 'Alice B', bio = 'Rapid fan', open_to_challenges = true where id = $1 returning display_name", [alice.id]);
+    const ok = await db
+      .as(alice.id)
+      .query(
+        "update public.profiles set display_name = 'Alice B', bio = 'Rapid fan', open_to_challenges = true where id = $1 returning display_name",
+        [alice.id],
+      );
     expect(ok.rows[0].display_name).toBe("Alice B");
 
     for (const col of [
-      "is_approved = true", "eligibility_status = 'revoked'", "eligibility_status = 'verified'", "account_status = 'suspended'",
-      "avatar_url = 'https://evil.example/x.png'", "is_demo = true", "onboarding_completed_at = null", "id = gen_random_uuid()",
+      "is_approved = true",
+      "eligibility_status = 'revoked'",
+      "eligibility_status = 'verified'",
+      "account_status = 'suspended'",
+      "avatar_url = 'https://evil.example/x.png'",
+      "is_demo = true",
+      "onboarding_completed_at = null",
+      "id = gen_random_uuid()",
     ]) {
-      const err = await sqlError(db.as(alice.id).query(`update public.profiles set ${col} where id = $1`, [alice.id]));
+      const err = await sqlError(
+        db.as(alice.id).query(`update public.profiles set ${col} where id = $1`, [alice.id]),
+      );
       expect(err.code, col).toBe("42501");
     }
   });
 
   it("cannot edit someone else's profile", async () => {
-    const r = await db.as(alice.id).query("update public.profiles set display_name = 'Pwned' where id = $1", [bob.id]);
+    const r = await db
+      .as(alice.id)
+      .query("update public.profiles set display_name = 'Pwned' where id = $1", [bob.id]);
     expect(r.rowCount).toBe(0);
-    expect((await db.admin.query("select display_name from public.profiles where id = $1", [bob.id])).rows[0].display_name).toBe("Bob");
+    expect(
+      (await db.admin.query("select display_name from public.profiles where id = $1", [bob.id]))
+        .rows[0].display_name,
+    ).toBe("Bob");
   });
 
   it("validates display names", async () => {
     for (const bad of ["x", "a".repeat(41), "bad\u0007name"]) {
-      const err = await sqlError(db.as(alice.id).query("update public.profiles set display_name = $1 where id = $2", [bad, alice.id]));
+      const err = await sqlError(
+        db
+          .as(alice.id)
+          .query("update public.profiles set display_name = $1 where id = $2", [bad, alice.id]),
+      );
       expect(err.code).toBe("23514");
     }
   });
@@ -145,15 +214,40 @@ describe("profiles", () => {
   it("lets a user see their own unapproved profile but not others'", async () => {
     const mine = await db.as(outsider.id).query("select id from public.profiles");
     expect(mine.rows.map((r) => r.id)).toContain(outsider.id);
-    const peer = await db.as(alice.id).query("select id from public.profiles where id = $1", [outsider.id]);
+    const peer = await db
+      .as(alice.id)
+      .query("select id from public.profiles where id = $1", [outsider.id]);
     expect(peer.rowCount).toBe(0);
   });
 
   it("keeps presence preference private and user-editable", async () => {
-    await db.as(alice.id).query("update public.profile_settings set presence_mode = 'invisible' where user_id = $1", [alice.id]);
-    expect((await db.as(bob.id).query("select * from public.profile_settings where user_id = $1", [alice.id])).rowCount).toBe(0);
-    expect((await db.as(alice.id).query("select presence_mode from public.profile_settings")).rows).toEqual([{ presence_mode: "invisible" }]);
-    expect((await sqlError(db.as(bob.id).query("update public.profile_settings set user_id = $1 where user_id = $2", [alice.id, bob.id]))).code).toBe("42501");
+    await db
+      .as(alice.id)
+      .query("update public.profile_settings set presence_mode = 'invisible' where user_id = $1", [
+        alice.id,
+      ]);
+    expect(
+      (
+        await db
+          .as(bob.id)
+          .query("select * from public.profile_settings where user_id = $1", [alice.id])
+      ).rowCount,
+    ).toBe(0);
+    expect(
+      (await db.as(alice.id).query("select presence_mode from public.profile_settings")).rows,
+    ).toEqual([{ presence_mode: "invisible" }]);
+    expect(
+      (
+        await sqlError(
+          db
+            .as(bob.id)
+            .query("update public.profile_settings set user_id = $1 where user_id = $2", [
+              alice.id,
+              bob.id,
+            ]),
+        )
+      ).code,
+    ).toBe("42501");
   });
 });
 
@@ -211,11 +305,22 @@ describe("administrator privileges cannot be forged", () => {
 
   it("ignores admin-looking claims in the JWT", async () => {
     const forged = db.as(alice.id, {
-      role: "service_role", is_admin: true, app_metadata: { role: "admin", roles: ["super_admin"] },
+      role: "service_role",
+      is_admin: true,
+      app_metadata: { role: "admin", roles: ["super_admin"] },
       user_metadata: { is_admin: true, role: "super_admin" },
     });
     expect((await sqlError(forged.query("select public.admin_overview()"))).code).toBe("42501");
-    expect((await sqlError(forged.query("insert into public.admin_roles (user_id, role) values ($1, 'super_admin')", [alice.id]))).code).toBe("42501");
+    expect(
+      (
+        await sqlError(
+          forged.query(
+            "insert into public.admin_roles (user_id, role) values ($1, 'super_admin')",
+            [alice.id],
+          ),
+        )
+      ).code,
+    ).toBe("42501");
     expect((await sqlError(db.anon.query("select 1 from public.admin_roles"))).code).toBe("42501");
   });
 
@@ -223,30 +328,79 @@ describe("administrator privileges cannot be forged", () => {
     const root = await db.createUser();
     await db.makeAdmin(root.id, "analyst");
     expect((await db.as(alice.id).query("select * from public.admin_roles")).rowCount).toBe(0);
-    expect((await db.as(root.id).query("select role from public.admin_roles")).rows).toEqual([{ role: "analyst" }]);
+    expect((await db.as(root.id).query("select role from public.admin_roles")).rows).toEqual([
+      { role: "analyst" },
+    ]);
   });
 
   it("derives permissions from the database, not from the request", async () => {
     const analyst = await db.createUser();
     await db.makeAdmin(analyst.id, "analyst");
     // Analysts can read aggregates but cannot mutate anything.
-    expect((await db.as(analyst.id).query("select public.admin_overview() as o")).rows[0].o.players.accounts).toBeGreaterThan(0);
-    expect((await sqlError(db.as(analyst.id).query("select public.admin_set_account_status($1, true, 'analyst cannot do this')", [bob.id]))).code).toBe("42501");
-    expect((await sqlError(db.as(analyst.id).query("select public.admin_unlink_chess_account($1, 'analyst cannot do this')", [bob.id]))).code).toBe("42501");
+    expect(
+      (await db.as(analyst.id).query("select public.admin_overview() as o")).rows[0].o.players
+        .accounts,
+    ).toBeGreaterThan(0);
+    expect(
+      (
+        await sqlError(
+          db
+            .as(analyst.id)
+            .query("select public.admin_set_account_status($1, true, 'analyst cannot do this')", [
+              bob.id,
+            ]),
+        )
+      ).code,
+    ).toBe("42501");
+    expect(
+      (
+        await sqlError(
+          db
+            .as(analyst.id)
+            .query("select public.admin_unlink_chess_account($1, 'analyst cannot do this')", [
+              bob.id,
+            ]),
+        )
+      ).code,
+    ).toBe("42501");
   });
 });
 
 describe("notifications", () => {
   it("are readable only by their owner, who can mark them read but not edit them", async () => {
-    await db.admin.query("select app_private.notify($1, 'account_notice', 'hello alice', 'body', '{}'::jsonb)", [alice.id]);
-    const mine = await db.as(alice.id).query("select id, title, read_at from public.notifications where title = 'hello alice'");
+    await db.admin.query(
+      "select app_private.notify($1, 'account_notice', 'hello alice', 'body', '{}'::jsonb)",
+      [alice.id],
+    );
+    const mine = await db
+      .as(alice.id)
+      .query("select id, title, read_at from public.notifications where title = 'hello alice'");
     expect(mine.rowCount).toBe(1);
-    expect((await db.as(bob.id).query("select * from public.notifications where title = 'hello alice'")).rowCount).toBe(0);
+    expect(
+      (await db.as(bob.id).query("select * from public.notifications where title = 'hello alice'"))
+        .rowCount,
+    ).toBe(0);
 
     const id = mine.rows[0].id;
-    expect((await db.as(bob.id).query("update public.notifications set read_at = now() where id = $1", [id])).rowCount).toBe(0);
-    await db.as(alice.id).query("update public.notifications set read_at = now() where id = $1", [id]);
-    expect((await sqlError(db.as(alice.id).query("update public.notifications set title = 'rewritten' where id = $1", [id]))).code).toBe("42501");
+    expect(
+      (
+        await db
+          .as(bob.id)
+          .query("update public.notifications set read_at = now() where id = $1", [id])
+      ).rowCount,
+    ).toBe(0);
+    await db
+      .as(alice.id)
+      .query("update public.notifications set read_at = now() where id = $1", [id]);
+    expect(
+      (
+        await sqlError(
+          db
+            .as(alice.id)
+            .query("update public.notifications set title = 'rewritten' where id = $1", [id]),
+        )
+      ).code,
+    ).toBe("42501");
   });
 });
 
@@ -254,24 +408,47 @@ describe("rate limiting", () => {
   it("enforces a per-user fixed window", async () => {
     const results: boolean[] = [];
     for (let i = 0; i < 5; i++) {
-      results.push((await db.as(bob.id).query("select public.consume_rate_limit('probe', 3, 60) as ok")).rows[0].ok);
+      results.push(
+        (await db.as(bob.id).query("select public.consume_rate_limit('probe', 3, 60) as ok"))
+          .rows[0].ok,
+      );
     }
     expect(results).toEqual([true, true, true, false, false]);
     // Another user's budget is untouched.
-    expect((await db.as(alice.id).query("select public.consume_rate_limit('probe', 3, 60) as ok")).rows[0].ok).toBe(true);
-    expect((await sqlError(db.anon.query("select public.consume_rate_limit('probe', 3, 60)"))).code).toBe("42501");
+    expect(
+      (await db.as(alice.id).query("select public.consume_rate_limit('probe', 3, 60) as ok"))
+        .rows[0].ok,
+    ).toBe(true);
+    expect(
+      (await sqlError(db.anon.query("select public.consume_rate_limit('probe', 3, 60)"))).code,
+    ).toBe("42501");
   });
 
   it("rejects abusive parameters", async () => {
-    expect((await sqlError(db.as(bob.id).query("select public.consume_rate_limit('bad action!', 3, 60)"))).code).toBe("22023");
-    expect((await sqlError(db.as(bob.id).query("select public.consume_rate_limit('ok', 100000, 60)"))).code).toBe("22023");
+    expect(
+      (
+        await sqlError(
+          db.as(bob.id).query("select public.consume_rate_limit('bad action!', 3, 60)"),
+        )
+      ).code,
+    ).toBe("22023");
+    expect(
+      (await sqlError(db.as(bob.id).query("select public.consume_rate_limit('ok', 100000, 60)")))
+        .code,
+    ).toBe("22023");
   });
 });
 
 describe("audit log", () => {
   it("is append-only, even for trusted roles", async () => {
-    await db.admin.query("select app_private.write_audit(null, 'system', 'test.event', 'test', 'x')");
-    for (const sql of ["update public.audit_logs set action = 'tampered'", "delete from public.audit_logs", "truncate public.audit_logs"]) {
+    await db.admin.query(
+      "select app_private.write_audit(null, 'system', 'test.event', 'test', 'x')",
+    );
+    for (const sql of [
+      "update public.audit_logs set action = 'tampered'",
+      "delete from public.audit_logs",
+      "truncate public.audit_logs",
+    ]) {
       const err = await sqlError(db.admin.query(sql));
       expect(err.message, sql).toMatch(/append-only/);
       const svc = await sqlError(db.service.query(sql));

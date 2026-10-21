@@ -17,13 +17,19 @@ const digest = (value: string) => createHash("sha256").update(value).digest();
 async function handler(req: NextRequest, ctx: { params: Promise<{ job: string }> }) {
   const secret = getCronSecret();
   if (!secret) {
-    return Response.json({ ok: false, error: "cron_not_configured" }, { status: 503, headers: { "Cache-Control": "no-store" } });
+    return Response.json(
+      { ok: false, error: "cron_not_configured" },
+      { status: 503, headers: { "Cache-Control": "no-store" } },
+    );
   }
   const presented = req.headers.get("authorization") ?? "";
   // Compare fixed-length digests so the comparison is constant-time regardless of input length.
   const authorised = timingSafeEqual(digest(presented), digest(`Bearer ${secret}`));
   if (!authorised) {
-    return Response.json({ ok: false, error: "unauthorized" }, { status: 401, headers: { "Cache-Control": "no-store" } });
+    return Response.json(
+      { ok: false, error: "unauthorized" },
+      { status: 401, headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const { job } = await ctx.params;
@@ -33,10 +39,16 @@ async function handler(req: NextRequest, ctx: { params: Promise<{ job: string }>
 
   try {
     const result = await runJob(job as JobName);
-    return Response.json({ ok: true, job, ...result }, { headers: { "Cache-Control": "no-store" } });
+    return Response.json(
+      { ok: true, job, ...result },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   } catch (error) {
     if (error instanceof JobConfigError) {
-      return Response.json({ ok: false, error: "not_configured", message: error.message }, { status: 503 });
+      return Response.json(
+        { ok: false, error: "not_configured", message: error.message },
+        { status: 503 },
+      );
     }
     console.error("[cron] job failed:", job, error instanceof Error ? error.message : "unknown");
     return Response.json({ ok: false, error: "job_failed" }, { status: 500 });

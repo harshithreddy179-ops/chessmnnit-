@@ -105,7 +105,8 @@
   --radius-lg: 0.75rem;
   --radius-xl: 1rem;
 
-  --shadow-card: 0 1px 0 0 rgb(var(--shadow-color) / 0.04), 0 8px 24px -12px rgb(var(--shadow-color) / 0.35);
+  --shadow-card:
+    0 1px 0 0 rgb(var(--shadow-color) / 0.04), 0 8px 24px -12px rgb(var(--shadow-color) / 0.35);
   --shadow-pop: 0 12px 40px -12px rgb(var(--shadow-color) / 0.55);
 }
 
@@ -162,8 +163,12 @@
     box-shadow: var(--shadow-pop);
   }
   .board-pattern {
-    background-image:
-      conic-gradient(var(--square-dark) 25%, var(--square-light) 0 50%, var(--square-dark) 0 75%, var(--square-light) 0);
+    background-image: conic-gradient(
+      var(--square-dark) 25%,
+      var(--square-light) 0 50%,
+      var(--square-dark) 0 75%,
+      var(--square-light) 0
+    );
     background-size: 64px 64px;
   }
   .scrollbar-thin {

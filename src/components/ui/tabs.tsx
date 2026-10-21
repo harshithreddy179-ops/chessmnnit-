@@ -11,13 +11,19 @@ export function Tabs({ className, ...props }: React.ComponentProps<typeof TabsPr
 export function TabsList({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.List>) {
   return (
     <TabsPrimitive.List
-      className={cn("scrollbar-thin inline-flex w-full items-center gap-1 overflow-x-auto border-b", className)}
+      className={cn(
+        "inline-flex w-full scrollbar-thin items-center gap-1 overflow-x-auto border-b",
+        className,
+      )}
       {...props}
     />
   );
 }
 
-export function TabsTrigger({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
+export function TabsTrigger({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsPrimitive.Trigger>) {
   return (
     <TabsPrimitive.Trigger
       className={cn(
@@ -29,6 +35,14 @@ export function TabsTrigger({ className, ...props }: React.ComponentProps<typeof
   );
 }
 
-export function TabsContent({ className, ...props }: React.ComponentProps<typeof TabsPrimitive.Content>) {
-  return <TabsPrimitive.Content className={cn("focus-visible:outline-2 focus-visible:outline-ring", className)} {...props} />;
+export function TabsContent({
+  className,
+  ...props
+}: React.ComponentProps<typeof TabsPrimitive.Content>) {
+  return (
+    <TabsPrimitive.Content
+      className={cn("focus-visible:outline-2 focus-visible:outline-ring", className)}
+      {...props}
+    />
+  );
 }

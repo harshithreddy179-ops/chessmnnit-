@@ -2,7 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { refreshSession } from "@/lib/supabase/proxy-session";
 
 /** Page prefixes that require a signed-in user. API routes authenticate themselves. */
-const PROTECTED = ["/dashboard", "/challenges", "/notifications", "/settings", "/onboarding", "/admin"];
+const PROTECTED = [
+  "/dashboard",
+  "/challenges",
+  "/notifications",
+  "/settings",
+  "/onboarding",
+  "/admin",
+];
 
 /**
  * Runs before every page request: keeps the Supabase session cookies fresh and gates the
@@ -27,5 +34,7 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   // Everything except Next internals, static assets and the cron/auth endpoints.
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/cron|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+  ],
 };

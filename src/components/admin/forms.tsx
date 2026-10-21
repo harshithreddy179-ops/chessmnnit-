@@ -16,7 +16,10 @@ export function AllowlistForm({ canAddDomains }: { canAddDomains: boolean }) {
   const [note, setNote] = useState("");
   const { run, busy, error } = useAction();
   // One bad line rejects the whole batch (so nothing is half-added); say exactly which lines.
-  const problems = error?.fields.filter((f) => f.path === "values" || f.path.startsWith("values.")).map((f) => f.message) ?? [];
+  const problems =
+    error?.fields
+      .filter((f) => f.path === "values" || f.path.startsWith("values."))
+      .map((f) => f.message) ?? [];
   const valuesError = problems.length
     ? `${problems.slice(0, 5).join("; ")}${problems.length > 5 ? `; and ${problems.length - 5} more` : ""}. Nothing was added.`
     : undefined;
@@ -25,27 +28,75 @@ export function AllowlistForm({ canAddDomains }: { canAddDomains: boolean }) {
       className="grid gap-4"
       onSubmit={async (e) => {
         e.preventDefault();
-        const list = values.split(/[\s,;]+/).map((v) => v.trim()).filter(Boolean);
-        const r = await run<{ added: number }>("add", "/api/admin", { body: { action: "add_eligibility", kind, values: list, note: note || undefined }, success: "Allowlist updated" });
+        const list = values
+          .split(/[\s,;]+/)
+          .map((v) => v.trim())
+          .filter(Boolean);
+        const r = await run<{ added: number }>("add", "/api/admin", {
+          body: { action: "add_eligibility", kind, values: list, note: note || undefined },
+          success: "Allowlist updated",
+        });
         if (r) setValues("");
       }}
     >
       <Field id={`${id}-k`} label="What are you adding?">
         {(a) => (
-          <NativeSelect {...a} value={kind} onChange={(e) => setKind(e.target.value as "email" | "domain")}>
+          <NativeSelect
+            {...a}
+            value={kind}
+            onChange={(e) => setKind(e.target.value as "email" | "domain")}
+          >
             <option value="email">Student email addresses</option>
-            {canAddDomains ? <option value="domain">A whole email domain (e.g. mnnit.ac.in) — broad, super admin only</option> : null}
+            {canAddDomains ? (
+              <option value="domain">
+                A whole email domain (e.g. mnnit.ac.in) — broad, super admin only
+              </option>
+            ) : null}
           </NativeSelect>
         )}
       </Field>
-      <Field id={`${id}-v`} label={kind === "email" ? "Emails (paste a list: one per line, or separated by commas)" : "Domain"} hint={kind === "domain" ? "Anyone with a verified Google account on this domain becomes eligible. Only add a domain the institute controls." : "Up to 1000 at a time."} error={valuesError} required>
-        {(a) => <Textarea {...a} value={values} onChange={(e) => setValues(e.target.value)} rows={kind === "email" ? 6 : 2} required />}
+      <Field
+        id={`${id}-v`}
+        label={
+          kind === "email"
+            ? "Emails (paste a list: one per line, or separated by commas)"
+            : "Domain"
+        }
+        hint={
+          kind === "domain"
+            ? "Anyone with a verified Google account on this domain becomes eligible. Only add a domain the institute controls."
+            : "Up to 1000 at a time."
+        }
+        error={valuesError}
+        required
+      >
+        {(a) => (
+          <Textarea
+            {...a}
+            value={values}
+            onChange={(e) => setValues(e.target.value)}
+            rows={kind === "email" ? 6 : 2}
+            required
+          />
+        )}
       </Field>
       <Field id={`${id}-n`} label="Note (optional)" error={error?.fieldError("note")}>
-        {(a) => <Input {...a} value={note} onChange={(e) => setNote(e.target.value)} maxLength={200} placeholder="e.g. 2026 batch list from the department" />}
+        {(a) => (
+          <Input
+            {...a}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            maxLength={200}
+            placeholder="e.g. 2026 batch list from the department"
+          />
+        )}
       </Field>
       {error && !error.fields.length ? <Alert variant="danger">{error.message}</Alert> : null}
-      <div><Button type="submit" loading={busy === "add"}>Add to allowlist</Button></div>
+      <div>
+        <Button type="submit" loading={busy === "add"}>
+          Add to allowlist
+        </Button>
+      </div>
     </form>
   );
 }
@@ -57,40 +108,140 @@ export function GrantRoleForm() {
   const [reason, setReason] = useState("");
   const { run, busy, error } = useAction();
   return (
-    <form className="grid gap-4" onSubmit={async (e) => { e.preventDefault(); const r = await run("grant", "/api/admin", { body: { action: "set_role", user_id: userId.trim(), role, grant: true, reason }, success: "Role granted" }); if (r) { setUserId(""); setReason(""); } }}>
-      <Field id={`${id}-u`} label="User ID" hint="Copy it from the user’s page under Users. The person must have signed in at least once." error={error?.fieldError("user_id")} required>
-        {(a) => <Input {...a} value={userId} onChange={(e) => setUserId(e.target.value)} className="font-mono" placeholder="00000000-0000-0000-0000-000000000000" required />}
+    <form
+      className="grid gap-4"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const r = await run("grant", "/api/admin", {
+          body: { action: "set_role", user_id: userId.trim(), role, grant: true, reason },
+          success: "Role granted",
+        });
+        if (r) {
+          setUserId("");
+          setReason("");
+        }
+      }}
+    >
+      <Field
+        id={`${id}-u`}
+        label="User ID"
+        hint="Copy it from the user’s page under Users. The person must have signed in at least once."
+        error={error?.fieldError("user_id")}
+        required
+      >
+        {(a) => (
+          <Input
+            {...a}
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            className="font-mono"
+            placeholder="00000000-0000-0000-0000-000000000000"
+            required
+          />
+        )}
       </Field>
       <Field id={`${id}-r`} label="Role">
-        {(a) => <NativeSelect {...a} value={role} onChange={(e) => setRole(e.target.value)}>{Object.entries(ROLE_LABEL).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</NativeSelect>}
+        {(a) => (
+          <NativeSelect {...a} value={role} onChange={(e) => setRole(e.target.value)}>
+            {Object.entries(ROLE_LABEL).map(([v, l]) => (
+              <option key={v} value={v}>
+                {l}
+              </option>
+            ))}
+          </NativeSelect>
+        )}
       </Field>
       <Field id={`${id}-why`} label="Reason" error={error?.fieldError("reason")} required>
-        {(a) => <Input {...a} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} required />}
+        {(a) => (
+          <Input
+            {...a}
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            maxLength={500}
+            required
+          />
+        )}
       </Field>
       {error && !error.fields.length ? <Alert variant="danger">{error.message}</Alert> : null}
-      <div><Button type="submit" loading={busy === "grant"}>Grant role</Button></div>
+      <div>
+        <Button type="submit" loading={busy === "grant"}>
+          Grant role
+        </Button>
+      </div>
     </form>
   );
 }
 
-export function SettingForm({ settingKey, value, description }: { settingKey: string; value: unknown; description: string }) {
+export function SettingForm({
+  settingKey,
+  value,
+  description,
+}: {
+  settingKey: string;
+  value: unknown;
+  description: string;
+}) {
   const id = useId();
-  const kind = typeof value === "boolean" ? "boolean" : typeof value === "number" ? "number" : "string";
+  const kind =
+    typeof value === "boolean" ? "boolean" : typeof value === "number" ? "number" : "string";
   const [draft, setDraft] = useState(String(value));
   const [reason, setReason] = useState("");
   const { run, busy, error } = useAction();
   const parsed = kind === "boolean" ? draft === "true" : kind === "number" ? Number(draft) : draft;
   return (
-    <form className="grid gap-3 rounded-lg border p-4 sm:grid-cols-[1fr_10rem_1fr_auto] sm:items-end" onSubmit={async (e) => { e.preventDefault(); const r = await run("save", "/api/admin", { body: { action: "update_setting", key: settingKey, value: parsed, reason }, success: "Setting saved" }); if (r) setReason(""); }}>
-      <div className="grid gap-0.5"><label htmlFor={`${id}-v`} className="font-mono text-sm font-medium">{settingKey}</label><p className="text-xs text-muted-foreground">{description}</p></div>
+    <form
+      className="grid gap-3 rounded-lg border p-4 sm:grid-cols-[1fr_10rem_1fr_auto] sm:items-end"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        const r = await run("save", "/api/admin", {
+          body: { action: "update_setting", key: settingKey, value: parsed, reason },
+          success: "Setting saved",
+        });
+        if (r) setReason("");
+      }}
+    >
+      <div className="grid gap-0.5">
+        <label htmlFor={`${id}-v`} className="font-mono text-sm font-medium">
+          {settingKey}
+        </label>
+        <p className="text-xs text-muted-foreground">{description}</p>
+      </div>
       {kind === "boolean" ? (
-        <NativeSelect id={`${id}-v`} value={draft} onChange={(e) => setDraft(e.target.value)}><option value="true">true</option><option value="false">false</option></NativeSelect>
+        <NativeSelect id={`${id}-v`} value={draft} onChange={(e) => setDraft(e.target.value)}>
+          <option value="true">true</option>
+          <option value="false">false</option>
+        </NativeSelect>
       ) : (
-        <Input id={`${id}-v`} type={kind === "number" ? "number" : "text"} min={kind === "number" ? 0 : undefined} value={draft} onChange={(e) => setDraft(e.target.value)} required />
+        <Input
+          id={`${id}-v`}
+          type={kind === "number" ? "number" : "text"}
+          min={kind === "number" ? 0 : undefined}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          required
+        />
       )}
-      <Input aria-label={`Reason for changing ${settingKey}`} placeholder="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} required />
-      <Button type="submit" size="sm" loading={busy === "save"} disabled={reason.trim().length < 5 || draft === String(value)}>Save</Button>
-      {error ? <p role="alert" className="text-xs text-danger sm:col-span-4">{error.message}</p> : null}
+      <Input
+        aria-label={`Reason for changing ${settingKey}`}
+        placeholder="Reason (required)"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        maxLength={500}
+        required
+      />
+      <Button
+        type="submit"
+        size="sm"
+        loading={busy === "save"}
+        disabled={reason.trim().length < 5 || draft === String(value)}
+      >
+        Save
+      </Button>
+      {error ? (
+        <p role="alert" className="text-xs text-danger sm:col-span-4">
+          {error.message}
+        </p>
+      ) : null}
     </form>
   );
 }

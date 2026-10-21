@@ -15,16 +15,26 @@ const REASONS: Record<string, string> = {
   not_configured: "Sign-in is not configured for this deployment yet.",
 };
 
-export default async function AuthErrorPage({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
+export default async function AuthErrorPage({
+  searchParams,
+}: {
+  searchParams: Promise<RawSearchParams>;
+}) {
   const reason = one((await searchParams).reason) ?? "";
   return (
     <main id="main" className="mx-auto grid min-h-dvh max-w-md content-center gap-6 px-4">
       <Brand />
       <h1 className="font-display text-4xl">We couldn’t sign you in</h1>
-      <Alert variant="danger">{REASONS[reason] ?? "Something went wrong during sign-in. Please try again."}</Alert>
+      <Alert variant="danger">
+        {REASONS[reason] ?? "Something went wrong during sign-in. Please try again."}
+      </Alert>
       <div className="flex gap-3">
-        <Button asChild><Link href="/login">Try again</Link></Button>
-        <Button asChild variant="outline"><Link href="/">Back to home</Link></Button>
+        <Button asChild>
+          <Link href="/login">Try again</Link>
+        </Button>
+        <Button asChild variant="outline">
+          <Link href="/">Back to home</Link>
+        </Button>
       </div>
     </main>
   );

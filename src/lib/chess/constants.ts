@@ -23,7 +23,8 @@ export const STATS_KEY_TO_CLASS: Record<string, TimeClass> = {
   chess_daily: "daily",
 };
 
-export const CHESSCOM_GAME_URL = /^https:\/\/www\.chess\.com\/(?:game|analysis)\/(?:live|daily)\/\d+/;
+export const CHESSCOM_GAME_URL =
+  /^https:\/\/www\.chess\.com\/(?:game|analysis)\/(?:live|daily)\/\d+/;
 
 /** Human wording for the verification statuses shown across the UI. */
 export const STATUS_LABEL = {

@@ -11,7 +11,9 @@ function ThemedToaster() {
       theme={resolvedTheme === "light" ? "light" : "dark"}
       position="bottom-right"
       closeButton
-      toastOptions={{ classNames: { toast: "!border !border-border !bg-popover !text-popover-foreground" } }}
+      toastOptions={{
+        classNames: { toast: "!border !border-border !bg-popover !text-popover-foreground" },
+      }}
     />
   );
 }
@@ -19,7 +21,12 @@ function ThemedToaster() {
 /** Theme (dark by default, optional light), tooltips and toast notifications. */
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem={false}
+      disableTransitionOnChange
+    >
       <TooltipProvider>
         {children}
         <ThemedToaster />

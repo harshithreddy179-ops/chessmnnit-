@@ -1,6 +1,11 @@
 import { ChessComError, type ChessComClient } from "@/lib/chess/client";
 import { monthsBetween, normalizeArchiveGame, type ImportGameRow } from "@/lib/chess/games";
-import { evaluateChallenge, nextCheckDelayMs, type ChallengeInput, type Decision } from "@/lib/matching/matcher";
+import {
+  evaluateChallenge,
+  nextCheckDelayMs,
+  type ChallengeInput,
+  type Decision,
+} from "@/lib/matching/matcher";
 import type { CheckRecord, ClaimedChallenge, SyncStore } from "@/server/sync/store";
 
 type Archives = Pick<ChessComClient, "getMonthlyArchive">;
@@ -56,20 +61,30 @@ export async function refreshArchives(
         for (const raw of res.data.games) {
           const { game } = normalizeArchiveGame(raw, month);
           if (!game) skipped++;
-          else if (members.has(game.white_username) && members.has(game.black_username)) rows.push(game);
+          else if (members.has(game.white_username) && members.has(game.black_username))
+            rows.push(game);
         }
         if (rows.length) result.imported += await store.importGames(rows);
         // Validators are saved only after the import succeeded, so a failed import is retried in full.
-        await store.saveArchiveState(username, month, { etag: res.etag, lastModified: res.lastModified, gameCount: res.data.games.length });
-        result.notes.push(`${username} ${month}: ${res.data.games.length} games, ${rows.length} between members${skipped ? `, ${skipped} unreadable skipped` : ""}`);
+        await store.saveArchiveState(username, month, {
+          etag: res.etag,
+          lastModified: res.lastModified,
+          gameCount: res.data.games.length,
+        });
+        result.notes.push(
+          `${username} ${month}: ${res.data.games.length} games, ${rows.length} between members${skipped ? `, ${skipped} unreadable skipped` : ""}`,
+        );
       } catch (error) {
         if (error instanceof ChessComError && error.kind === "not_found") {
           result.notes.push(`${username} ${month}: no archive`);
           continue; // no games that month
         }
         result.ok = false;
-        if (error instanceof ChessComError && error.kind === "rate_limited") result.rateLimited = true;
-        result.notes.push(`${username} ${month}: ${error instanceof ChessComError ? error.kind : "error"}`);
+        if (error instanceof ChessComError && error.kind === "rate_limited")
+          result.rateLimited = true;
+        result.notes.push(
+          `${username} ${month}: ${error instanceof ChessComError ? error.kind : "error"}`,
+        );
         return result;
       }
     }
@@ -118,7 +133,9 @@ export async function processChallenge(
       settleUntil: c.settleUntil,
       candidates: c.candidateGameIds,
       detail: { notes: refresh.notes },
-      reviewReason: pastDeadline ? "Chess.com archives were unavailable for the whole waiting window" : undefined,
+      reviewReason: pastDeadline
+        ? "Chess.com archives were unavailable for the whole waiting window"
+        : undefined,
     });
     return { kind: "deferred", rateLimited: refresh.rateLimited };
   }
@@ -127,22 +144,39 @@ export async function processChallenge(
   const since = new Date(c.acceptedAt.getTime() - 6 * 3_600_000);
   const games = await store.pairGames(c.challengerUsername, c.recipientUsername, since);
   const attached = await store.attachedGameIds(games.map((g) => g.id));
-  const decision = evaluateChallenge(toInput(c), games, { now, settleMinutes, attachedGameIds: attached });
-  const detail = { notes: refresh.notes, rejected: decision.rejected, imported: refresh.imported, months: refresh.months };
+  const decision = evaluateChallenge(toInput(c), games, {
+    now,
+    settleMinutes,
+    attachedGameIds: attached,
+  });
+  const detail = {
+    notes: refresh.notes,
+    rejected: decision.rejected,
+    imported: refresh.imported,
+    months: refresh.months,
+  };
 
   switch (decision.kind) {
     case "no_game":
       await store.recordCheck({
-        challengeId: c.id, outcome: "no_game_found", newStatus: "waiting_for_game", nextCheckAt: decision.nextCheckAt,
-        settleUntil: null, candidates: [], detail,
+        challengeId: c.id,
+        outcome: "no_game_found",
+        newStatus: "waiting_for_game",
+        nextCheckAt: decision.nextCheckAt,
+        settleUntil: null,
+        candidates: [],
+        detail,
       });
       break;
     case "settling":
       await store.recordCheck({
         challengeId: c.id,
         outcome: c.candidateGameIds[0] === decision.candidate.id ? "settling" : "candidate_found",
-        newStatus: "checking_result", nextCheckAt: decision.nextCheckAt, settleUntil: decision.settleUntil,
-        candidates: [decision.candidate.id], detail: { ...detail, candidate: decision.candidate.url ?? decision.candidate.id },
+        newStatus: "checking_result",
+        nextCheckAt: decision.nextCheckAt,
+        settleUntil: decision.settleUntil,
+        candidates: [decision.candidate.id],
+        detail: { ...detail, candidate: decision.candidate.url ?? decision.candidate.id },
       });
       break;
     case "verified":
@@ -151,8 +185,14 @@ export async function processChallenge(
       } catch (error) {
         // The database re-checks every invariant. If it refuses, a human decides.
         await store.recordCheck({
-          challengeId: c.id, outcome: "error", newStatus: "needs_review", nextCheckAt: null, settleUntil: null,
-          candidates: [decision.game.id], detail, error: error instanceof Error ? error.message : "finalize failed",
+          challengeId: c.id,
+          outcome: "error",
+          newStatus: "needs_review",
+          nextCheckAt: null,
+          settleUntil: null,
+          candidates: [decision.game.id],
+          detail,
+          error: error instanceof Error ? error.message : "finalize failed",
           reviewReason: "The result could not be recorded automatically",
         });
         return { kind: "ambiguous", rateLimited: false };
@@ -160,21 +200,38 @@ export async function processChallenge(
       break;
     case "ambiguous":
       await store.recordCheck({
-        challengeId: c.id, outcome: "ambiguous", newStatus: "needs_review", nextCheckAt: null, settleUntil: null,
-        candidates: decision.candidates.map((g) => g.id), detail: { ...detail, candidates: decision.candidates.map((g) => g.url ?? g.id) },
+        challengeId: c.id,
+        outcome: "ambiguous",
+        newStatus: "needs_review",
+        nextCheckAt: null,
+        settleUntil: null,
+        candidates: decision.candidates.map((g) => g.id),
+        detail: { ...detail, candidates: decision.candidates.map((g) => g.url ?? g.id) },
         reviewReason: decision.reason,
       });
       break;
     case "unknown_result":
       await store.recordCheck({
-        challengeId: c.id, outcome: "unknown_result", newStatus: "needs_review", nextCheckAt: null, settleUntil: null,
-        candidates: [decision.game.id], detail, reviewReason: decision.reason,
+        challengeId: c.id,
+        outcome: "unknown_result",
+        newStatus: "needs_review",
+        nextCheckAt: null,
+        settleUntil: null,
+        candidates: [decision.game.id],
+        detail,
+        reviewReason: decision.reason,
       });
       break;
     case "give_up":
       await store.recordCheck({
-        challengeId: c.id, outcome: "gave_up", newStatus: "needs_review", nextCheckAt: null, settleUntil: null,
-        candidates: [], detail, reviewReason: decision.reason,
+        challengeId: c.id,
+        outcome: "gave_up",
+        newStatus: "needs_review",
+        nextCheckAt: null,
+        settleUntil: null,
+        candidates: [],
+        detail,
+        reviewReason: decision.reason,
       });
       break;
   }
@@ -188,7 +245,14 @@ export async function runChallengeSync(
   options: { limit: number; deadline: number; now?: () => Date },
 ): Promise<ChallengeSyncSummary> {
   const summary: ChallengeSyncSummary = {
-    expired: 0, claimed: 0, verified: 0, settling: 0, waiting: 0, needsReview: 0, deferred: 0, stoppedEarly: false,
+    expired: 0,
+    claimed: 0,
+    verified: 0,
+    settling: 0,
+    waiting: 0,
+    needsReview: 0,
+    deferred: 0,
+    stoppedEarly: false,
   };
   summary.expired = await store.expireStaleChallenges();
   const settleMinutes = await store.settleMinutes();
@@ -206,13 +270,26 @@ export async function runChallengeSync(
         summary.stoppedEarly = true;
         break;
       }
-      const outcome = await processChallenge(store, client, c, { now: clock(), settleMinutes, members });
+      const outcome = await processChallenge(store, client, c, {
+        now: clock(),
+        settleMinutes,
+        members,
+      });
       switch (outcome.kind) {
-        case "verified": summary.verified++; break;
-        case "settling": summary.settling++; break;
-        case "no_game": summary.waiting++; break;
-        case "deferred": summary.deferred++; break;
-        default: summary.needsReview++;
+        case "verified":
+          summary.verified++;
+          break;
+        case "settling":
+          summary.settling++;
+          break;
+        case "no_game":
+          summary.waiting++;
+          break;
+        case "deferred":
+          summary.deferred++;
+          break;
+        default:
+          summary.needsReview++;
       }
       if (outcome.rateLimited) {
         summary.stoppedEarly = true;

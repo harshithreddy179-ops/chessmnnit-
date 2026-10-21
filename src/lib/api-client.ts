@@ -20,7 +20,10 @@ export class ApiClientError extends Error {
  * Calls one of this app's JSON routes. Resolves with the `data` payload; rejects with an
  * ApiClientError whose message is already phrased for people (never a raw database error).
  */
-export async function api<T = unknown>(path: string, options: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function api<T = unknown>(
+  path: string,
+  options: { method?: string; body?: unknown } = {},
+): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -30,9 +33,17 @@ export async function api<T = unknown>(path: string, options: { method?: string;
       credentials: "same-origin",
     });
   } catch {
-    throw new ApiClientError(0, "network", "You appear to be offline. Check your connection and try again.");
+    throw new ApiClientError(
+      0,
+      "network",
+      "You appear to be offline. Check your connection and try again.",
+    );
   }
-  let payload: { ok?: boolean; data?: T; error?: { code?: string; message?: string; fields?: { path: string; message: string }[] } } = {};
+  let payload: {
+    ok?: boolean;
+    data?: T;
+    error?: { code?: string; message?: string; fields?: { path: string; message: string }[] };
+  } = {};
   try {
     payload = await res.json();
   } catch {

@@ -10,7 +10,12 @@ const text = (min: number, max: number, label: string) =>
   z
     .string()
     .transform(clean)
-    .pipe(z.string().min(min, `${label} must be at least ${min} characters`).max(max, `${label} must be at most ${max} characters`));
+    .pipe(
+      z
+        .string()
+        .min(min, `${label} must be at least ${min} characters`)
+        .max(max, `${label} must be at most ${max} characters`),
+    );
 
 export const uuid = z.uuid();
 export const timeClass = z.enum(TIME_CLASSES);
@@ -46,7 +51,12 @@ export const recoverySchema = z.object({
 export const challengeCreateSchema = z.object({
   recipient_id: uuid,
   time_control: z.string().regex(/^([0-9]+(\+[0-9]+)?|1\/[0-9]+)$/, "Choose a time control"),
-  message: z.string().transform(clean).pipe(z.string().max(280, "Keep the message under 280 characters")).nullable().optional(),
+  message: z
+    .string()
+    .transform(clean)
+    .pipe(z.string().max(280, "Keep the message under 280 characters"))
+    .nullable()
+    .optional(),
 });
 
 export const challengeActionSchema = z.object({ action: z.enum(["accept", "decline", "cancel"]) });
@@ -80,27 +90,69 @@ const DOMAIN_SHAPE = /^[a-z0-9.-]+\.[a-z]{2,}$/;
 export const adminActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("review_claim"), claim_id: uuid, approve: z.boolean(), reason }),
   z.object({ action: z.literal("unlink_account"), user_id: uuid, reason }),
-  z.object({ action: z.literal("resolve_recovery"), request_id: uuid, approve: z.boolean(), reason }),
   z.object({
-    action: z.literal("add_eligibility"),
-    kind: z.enum(["email", "domain"]),
-    values: z.array(z.string().trim().toLowerCase().min(3).max(254)).min(1).max(1000),
-    note: z.string().transform(clean).pipe(z.string().max(200)).optional(),
-  }).superRefine((v, ctx) => {
-    const shape = v.kind === "email" ? EMAIL_SHAPE : DOMAIN_SHAPE;
-    v.values.forEach((value, index) => {
-      if (!shape.test(value)) {
-        ctx.addIssue({ code: "custom", path: ["values", index], message: `“${value.slice(0, 60)}” is not a valid ${v.kind === "email" ? "email address" : "domain"}` });
-      }
-    });
+    action: z.literal("resolve_recovery"),
+    request_id: uuid,
+    approve: z.boolean(),
+    reason,
   }),
+  z
+    .object({
+      action: z.literal("add_eligibility"),
+      kind: z.enum(["email", "domain"]),
+      values: z.array(z.string().trim().toLowerCase().min(3).max(254)).min(1).max(1000),
+      note: z.string().transform(clean).pipe(z.string().max(200)).optional(),
+    })
+    .superRefine((v, ctx) => {
+      const shape = v.kind === "email" ? EMAIL_SHAPE : DOMAIN_SHAPE;
+      v.values.forEach((value, index) => {
+        if (!shape.test(value)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["values", index],
+            message: `“${value.slice(0, 60)}” is not a valid ${v.kind === "email" ? "email address" : "domain"}`,
+          });
+        }
+      });
+    }),
   z.object({ action: z.literal("remove_eligibility"), id: uuid, reason }),
-  z.object({ action: z.literal("set_user_eligibility"), user_id: uuid, status: z.enum(["verified", "revoked", "unverified"]), reason }),
-  z.object({ action: z.literal("review_eligibility_request"), id: uuid, approve: z.boolean(), reason }),
-  z.object({ action: z.literal("set_account_status"), user_id: uuid, suspend: z.boolean(), reason }),
-  z.object({ action: z.literal("set_role"), user_id: uuid, role: appRole, grant: z.boolean(), reason }),
-  z.object({ action: z.literal("update_setting"), key: z.string().regex(/^[a-z0-9_]{1,64}$/), value: z.union([z.number(), z.boolean(), z.string()]), reason }),
-  z.object({ action: z.literal("resolve_with_game"), challenge_id: uuid, game_url: z.string().trim().url().max(300), reason }),
+  z.object({
+    action: z.literal("set_user_eligibility"),
+    user_id: uuid,
+    status: z.enum(["verified", "revoked", "unverified"]),
+    reason,
+  }),
+  z.object({
+    action: z.literal("review_eligibility_request"),
+    id: uuid,
+    approve: z.boolean(),
+    reason,
+  }),
+  z.object({
+    action: z.literal("set_account_status"),
+    user_id: uuid,
+    suspend: z.boolean(),
+    reason,
+  }),
+  z.object({
+    action: z.literal("set_role"),
+    user_id: uuid,
+    role: appRole,
+    grant: z.boolean(),
+    reason,
+  }),
+  z.object({
+    action: z.literal("update_setting"),
+    key: z.string().regex(/^[a-z0-9_]{1,64}$/),
+    value: z.union([z.number(), z.boolean(), z.string()]),
+    reason,
+  }),
+  z.object({
+    action: z.literal("resolve_with_game"),
+    challenge_id: uuid,
+    game_url: z.string().trim().url().max(300),
+    reason,
+  }),
   z.object({
     action: z.literal("manual_result"),
     challenge_id: uuid,
@@ -111,9 +163,19 @@ export const adminActionSchema = z.discriminatedUnion("action", [
     reason: text(10, 500, "Evidence"),
   }),
   z.object({ action: z.literal("void_challenge"), challenge_id: uuid, reason }),
-  z.object({ action: z.literal("correct_match"), match_id: uuid, result: z.enum(["white", "black", "draw"]), reason }),
+  z.object({
+    action: z.literal("correct_match"),
+    match_id: uuid,
+    result: z.enum(["white", "black", "draw"]),
+    reason,
+  }),
   z.object({ action: z.literal("retry_challenge_sync"), challenge_id: uuid }),
-  z.object({ action: z.literal("resolve_dispute"), dispute_id: uuid, status: z.enum(["resolved", "rejected"]), note: reason }),
+  z.object({
+    action: z.literal("resolve_dispute"),
+    dispute_id: uuid,
+    status: z.enum(["resolved", "rejected"]),
+    note: reason,
+  }),
   z.object({ action: z.literal("retry_player_sync"), user_id: uuid }),
 ]);
 export type AdminAction = z.infer<typeof adminActionSchema>;

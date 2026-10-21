@@ -11,7 +11,11 @@ export async function getOverview(db: Db) {
     queues: Record<string, number>;
     challenges: { created_7d: number; by_status: Record<string, number> };
     matches: Record<string, number>;
-    sync: { players_with_errors: number; players_never_synced: number; last_runs: { job: string; status: string; started_at: string; finished_at: string | null }[] };
+    sync: {
+      players_with_errors: number;
+      players_never_synced: number;
+      last_runs: { job: string; status: string; started_at: string; finished_at: string | null }[];
+    };
   };
 }
 

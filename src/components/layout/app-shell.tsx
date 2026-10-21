@@ -19,7 +19,10 @@ export function AppShell({ ctx, children }: { ctx: AppContext; children: React.R
           <div className="mt-auto grid gap-2 rounded-lg border bg-card p-3 text-sm">
             <p className="truncate font-medium">{ctx.profile.display_name}</p>
             {ctx.link ? (
-              <Link href={`/players/${ctx.link.chess_username}`} className="truncate text-xs text-muted-foreground hover:text-foreground">
+              <Link
+                href={`/players/${ctx.link.chess_username}`}
+                className="truncate text-xs text-muted-foreground hover:text-foreground"
+              >
                 @{ctx.link.chess_username}
               </Link>
             ) : (
@@ -37,7 +40,11 @@ export function AppShell({ ctx, children }: { ctx: AppContext; children: React.R
           <div className="ml-auto flex items-center gap-1.5">
             <ThemeToggle />
             <NotificationBell />
-            <UserMenu name={ctx.profile.display_name} avatarUrl={ctx.profile.avatar_url} isAdmin={isAdmin} />
+            <UserMenu
+              name={ctx.profile.display_name}
+              avatarUrl={ctx.profile.avatar_url}
+              isAdmin={isAdmin}
+            />
           </div>
         </header>
         <div className="border-b px-2 py-1.5 md:hidden">

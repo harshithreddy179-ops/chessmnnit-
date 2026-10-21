@@ -20,7 +20,7 @@ export function DropdownMenuContent({
         sideOffset={sideOffset}
         align={align}
         className={cn(
-          "shadow-pop z-50 min-w-48 overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground",
+          "z-50 min-w-48 overflow-hidden rounded-lg border bg-popover p-1 text-popover-foreground shadow-pop",
           className,
         )}
         {...props}
@@ -46,13 +46,23 @@ export function DropdownMenuItem({
   );
 }
 
-export function DropdownMenuLabel({ className, ...props }: React.ComponentProps<typeof MenuPrimitive.Label>) {
-  return <MenuPrimitive.Label className={cn("px-2.5 py-1.5 text-xs text-muted-foreground", className)} {...props} />;
+export function DropdownMenuLabel({
+  className,
+  ...props
+}: React.ComponentProps<typeof MenuPrimitive.Label>) {
+  return (
+    <MenuPrimitive.Label
+      className={cn("px-2.5 py-1.5 text-xs text-muted-foreground", className)}
+      {...props}
+    />
+  );
 }
 
 export function DropdownMenuSeparator({
   className,
   ...props
 }: React.ComponentProps<typeof MenuPrimitive.Separator>) {
-  return <MenuPrimitive.Separator className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />;
+  return (
+    <MenuPrimitive.Separator className={cn("-mx-1 my-1 h-px bg-border", className)} {...props} />
+  );
 }

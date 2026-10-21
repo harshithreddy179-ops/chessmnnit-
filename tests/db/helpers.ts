@@ -6,9 +6,14 @@ export type ApiRole = "anon" | "authenticated" | "service_role";
 
 export interface Actor {
   /** Run one statement in its own transaction as this actor (RLS applies). */
-  query<T extends QueryResultRow = QueryResultRow>(sql: string, params?: unknown[]): Promise<QueryResult<T>>;
+  query<T extends QueryResultRow = QueryResultRow>(
+    sql: string,
+    params?: unknown[],
+  ): Promise<QueryResult<T>>;
   /** Run several statements in ONE transaction as this actor. */
-  tx<T>(fn: (q: (sql: string, params?: unknown[]) => Promise<QueryResult>) => Promise<T>): Promise<T>;
+  tx<T>(
+    fn: (q: (sql: string, params?: unknown[]) => Promise<QueryResult>) => Promise<T>,
+  ): Promise<T>;
 }
 
 export interface TestDb {
@@ -19,11 +24,23 @@ export interface TestDb {
   as(userId: string, extraClaims?: Record<string, unknown>): Actor;
   anon: Actor;
   service: Actor;
-  createUser(opts?: { email?: string; name?: string; confirmed?: boolean }): Promise<{ id: string; email: string }>;
+  createUser(opts?: {
+    email?: string;
+    name?: string;
+    confirmed?: boolean;
+  }): Promise<{ id: string; email: string }>;
   allowEmail(email: string): Promise<void>;
   /** Drives the real flow: allowlist -> eligibility -> claim -> verification -> onboarding. */
-  onboard(opts?: { username?: string; name?: string; email?: string; playerId?: number }): Promise<Player>;
-  makeAdmin(userId: string, role: "super_admin" | "verification_admin" | "match_moderator" | "analyst"): Promise<void>;
+  onboard(opts?: {
+    username?: string;
+    name?: string;
+    email?: string;
+    playerId?: number;
+  }): Promise<Player>;
+  makeAdmin(
+    userId: string,
+    role: "super_admin" | "verification_admin" | "match_moderator" | "analyst",
+  ): Promise<void>;
   /** Creates a linked pair, an accepted challenge and an imported game between them. */
   close(): Promise<void>;
 }
@@ -35,17 +52,28 @@ export interface Player {
   playerId: number;
 }
 
-function claimsFor(userId: string | null, role: ApiRole, extra: Record<string, unknown> = {}): string {
+function claimsFor(
+  userId: string | null,
+  role: ApiRole,
+  extra: Record<string, unknown> = {},
+): string {
   return JSON.stringify({ ...(userId ? { sub: userId } : {}), role, aud: role, ...extra });
 }
 
-function makeActor(pool: Pool, role: ApiRole, userId: string | null, extra: Record<string, unknown> = {}): Actor {
+function makeActor(
+  pool: Pool,
+  role: ApiRole,
+  userId: string | null,
+  extra: Record<string, unknown> = {},
+): Actor {
   const run = async <T>(fn: (c: import("pg").PoolClient) => Promise<T>): Promise<T> => {
     const client = await pool.connect();
     try {
       await client.query("begin");
       await client.query(`set local role ${role}`);
-      await client.query("select set_config('request.jwt.claims', $1, true)", [claimsFor(userId, role, extra)]);
+      await client.query("select set_config('request.jwt.claims', $1, true)", [
+        claimsFor(userId, role, extra),
+      ]);
       const out = await fn(client);
       await client.query("commit");
       return out;
@@ -93,7 +121,12 @@ export function bindTestDb(name: string, dropOnClose: boolean): TestDb {
       await admin.query(
         `insert into auth.users (id, email, email_confirmed_at, raw_user_meta_data)
          values ($1, $2, $3, $4::jsonb)`,
-        [id, email, opts.confirmed === false ? null : new Date(), JSON.stringify(opts.name ? { full_name: opts.name } : {})],
+        [
+          id,
+          email,
+          opts.confirmed === false ? null : new Date(),
+          JSON.stringify(opts.name ? { full_name: opts.name } : {}),
+        ],
       );
       return { id, email };
     },
@@ -112,7 +145,9 @@ export function bindTestDb(name: string, dropOnClose: boolean): TestDb {
       await db.allowEmail(user.email);
       const me = db.as(user.id);
       await me.query("select public.claim_eligibility()");
-      const claim = await me.query<{ id: string }>("select * from public.start_chess_claim($1)", [username]);
+      const claim = await me.query<{ id: string }>("select * from public.start_chess_claim($1)", [
+        username,
+      ]);
       const res = await db.service.query<{ confirm_chess_link: { ok: boolean; reason?: string } }>(
         "select public.confirm_chess_link($1, $2, $3, 'profile_code')",
         [claim.rows[0]!.id, username, playerId],
@@ -120,13 +155,19 @@ export function bindTestDb(name: string, dropOnClose: boolean): TestDb {
       if (!res.rows[0]!.confirm_chess_link.ok) {
         throw new Error(`verification failed: ${JSON.stringify(res.rows[0])}`);
       }
-      await me.query("update public.profiles set display_name = $1 where id = $2", [opts.name ?? "Test Player", user.id]);
+      await me.query("update public.profiles set display_name = $1 where id = $2", [
+        opts.name ?? "Test Player",
+        user.id,
+      ]);
       await me.query("select public.complete_onboarding()");
       return { id: user.id, email: user.email, username, playerId };
     },
 
     async makeAdmin(userId, role) {
-      await admin.query("insert into public.admin_roles (user_id, role) values ($1, $2) on conflict do nothing", [userId, role]);
+      await admin.query(
+        "insert into public.admin_roles (user_id, role) values ($1, $2) on conflict do nothing",
+        [userId, role],
+      );
     },
 
     async close() {
@@ -142,7 +183,9 @@ export function bindTestDb(name: string, dropOnClose: boolean): TestDb {
 }
 
 /** Postgres error helpers for readable assertions. */
-export async function sqlError(promise: Promise<unknown>): Promise<{ code?: string; message: string }> {
+export async function sqlError(
+  promise: Promise<unknown>,
+): Promise<{ code?: string; message: string }> {
   try {
     await promise;
   } catch (error) {

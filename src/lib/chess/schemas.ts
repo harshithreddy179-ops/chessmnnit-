@@ -27,9 +27,15 @@ export type ChessComProfile = z.infer<typeof ChessComProfileSchema>;
 
 const CategoryStatsSchema = z.looseObject({
   last: z.looseObject({ rating: num.int(), date: num.optional(), rd: num.optional() }).optional(),
-  best: z.looseObject({ rating: num.int(), date: num.optional(), game: z.string().optional() }).optional(),
+  best: z
+    .looseObject({ rating: num.int(), date: num.optional(), game: z.string().optional() })
+    .optional(),
   record: z
-    .looseObject({ win: num.int().optional(), loss: num.int().optional(), draw: num.int().optional() })
+    .looseObject({
+      win: num.int().optional(),
+      loss: num.int().optional(),
+      draw: num.int().optional(),
+    })
     .optional(),
 });
 

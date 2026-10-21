@@ -9,7 +9,15 @@ export function MarkAllRead({ disabled }: { disabled: boolean }) {
   const router = useRouter();
   const n = useNotifications();
   return (
-    <Button variant="outline" size="sm" disabled={disabled} onClick={async () => { await n?.markAllRead(); router.refresh(); }}>
+    <Button
+      variant="outline"
+      size="sm"
+      disabled={disabled}
+      onClick={async () => {
+        await n?.markAllRead();
+        router.refresh();
+      }}
+    >
       <CheckCheck aria-hidden /> Mark all as read
     </Button>
   );

@@ -3,19 +3,27 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { AlertTriangle, CheckCircle2, Info, XOctagon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const alertVariants = cva("relative flex gap-3 rounded-lg border p-4 text-sm [&>svg]:mt-0.5 [&>svg]:size-4 [&>svg]:shrink-0", {
-  variants: {
-    variant: {
-      info: "border-info/30 bg-info/5 [&>svg]:text-info",
-      success: "border-success/30 bg-success/5 [&>svg]:text-success",
-      warning: "border-warning/30 bg-warning/5 [&>svg]:text-warning",
-      danger: "border-danger/30 bg-danger/5 [&>svg]:text-danger",
+const alertVariants = cva(
+  "relative flex gap-3 rounded-lg border p-4 text-sm [&>svg]:mt-0.5 [&>svg]:size-4 [&>svg]:shrink-0",
+  {
+    variants: {
+      variant: {
+        info: "border-info/30 bg-info/5 [&>svg]:text-info",
+        success: "border-success/30 bg-success/5 [&>svg]:text-success",
+        warning: "border-warning/30 bg-warning/5 [&>svg]:text-warning",
+        danger: "border-danger/30 bg-danger/5 [&>svg]:text-danger",
+      },
     },
+    defaultVariants: { variant: "info" },
   },
-  defaultVariants: { variant: "info" },
-});
+);
 
-const icons = { info: Info, success: CheckCircle2, warning: AlertTriangle, danger: XOctagon } as const;
+const icons = {
+  info: Info,
+  success: CheckCircle2,
+  warning: AlertTriangle,
+  danger: XOctagon,
+} as const;
 
 export function Alert({
   className,

@@ -5,3 +5,4 @@ package-lock.json
 supabase/migrations
 playwright-report
 test-results
+src/lib/database.types.ts

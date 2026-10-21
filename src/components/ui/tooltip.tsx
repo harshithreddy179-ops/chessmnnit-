@@ -24,7 +24,7 @@ export function Tip({
           side={side}
           sideOffset={6}
           className={cn(
-            "shadow-pop z-50 max-w-64 rounded-md border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground",
+            "z-50 max-w-64 rounded-md border bg-popover px-2.5 py-1.5 text-xs text-popover-foreground shadow-pop",
           )}
         >
           {content}

@@ -6,7 +6,13 @@ import { runChallengeSync } from "@/server/sync/challenges";
 import { runPlayerSync } from "@/server/sync/players";
 import { createSupabaseSyncStore } from "@/server/sync/supabase-store";
 
-export const JOB_NAMES = ["run-all", "sync-challenges", "sync-players", "expire-challenges", "housekeeping"] as const;
+export const JOB_NAMES = [
+  "run-all",
+  "sync-challenges",
+  "sync-players",
+  "expire-challenges",
+  "housekeeping",
+] as const;
 export type JobName = (typeof JOB_NAMES)[number];
 
 export class JobConfigError extends Error {}
@@ -14,7 +20,11 @@ export class JobConfigError extends Error {}
 /** Leave headroom below the platform's function time limit (see `maxDuration` on the route). */
 export const DEFAULT_BUDGET_MS = 50_000;
 
-async function execute(admin: Db, name: Exclude<JobName, "run-all">, deadline: number): Promise<Record<string, unknown>> {
+async function execute(
+  admin: Db,
+  name: Exclude<JobName, "run-all">,
+  deadline: number,
+): Promise<Record<string, unknown>> {
   switch (name) {
     case "expire-challenges": {
       const { data, error } = await admin.rpc("expire_stale_challenges");
@@ -22,7 +32,12 @@ async function execute(admin: Db, name: Exclude<JobName, "run-all">, deadline: n
       return { expired: data ?? 0 };
     }
     case "sync-challenges":
-      return { ...(await runChallengeSync(createSupabaseSyncStore(admin), getChessClient(), { limit: 50, deadline })) };
+      return {
+        ...(await runChallengeSync(createSupabaseSyncStore(admin), getChessClient(), {
+          limit: 50,
+          deadline,
+        })),
+      };
     case "sync-players":
       return { ...(await runPlayerSync(admin, getChessClient(), { limit: 40, deadline })) };
     case "housekeeping": {
@@ -44,9 +59,18 @@ export async function runJob(name: JobName, budgetMs = DEFAULT_BUDGET_MS) {
 
   const started = await admin.rpc("start_job_run", { p_job: name });
   const runId = started.data as number | null;
-  const finish = async (status: "ok" | "partial" | "error", stats: Record<string, unknown>, error?: string) => {
+  const finish = async (
+    status: "ok" | "partial" | "error",
+    stats: Record<string, unknown>,
+    error?: string,
+  ) => {
     if (runId !== null) {
-      await admin.rpc("finish_job_run", { p_id: runId, p_status: status, p_stats: stats as never, p_error: error });
+      await admin.rpc("finish_job_run", {
+        p_id: runId,
+        p_status: status,
+        p_stats: stats as never,
+        p_error: error,
+      });
     }
   };
 
@@ -54,7 +78,12 @@ export async function runJob(name: JobName, budgetMs = DEFAULT_BUDGET_MS) {
     let stats: Record<string, unknown>;
     if (name === "run-all") {
       stats = {};
-      for (const step of ["expire-challenges", "sync-challenges", "sync-players", "housekeeping"] as const) {
+      for (const step of [
+        "expire-challenges",
+        "sync-challenges",
+        "sync-players",
+        "housekeeping",
+      ] as const) {
         stats[step] = await execute(admin, step, deadline);
       }
     } else {

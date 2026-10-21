@@ -3,10 +3,24 @@ import { ChessComGameSchema, type ChessComGame } from "@/lib/chess/schemas";
 import { isValidChessUsername, normalizeChessUsername } from "@/lib/chess/username";
 
 /** Result codes Chess.com reports per side that mean the game was drawn. */
-const DRAW_CODES = new Set(["agreed", "repetition", "stalemate", "insufficient", "50move", "timevsinsufficient"]);
+const DRAW_CODES = new Set([
+  "agreed",
+  "repetition",
+  "stalemate",
+  "insufficient",
+  "50move",
+  "timevsinsufficient",
+]);
 /** Result codes that mean that side lost. */
 const LOSS_CODES = new Set([
-  "checkmated", "resigned", "timeout", "abandoned", "lose", "kingofthehill", "threecheck", "bughousepartnerlose",
+  "checkmated",
+  "resigned",
+  "timeout",
+  "abandoned",
+  "lose",
+  "kingofthehill",
+  "threecheck",
+  "bughousepartnerlose",
 ]);
 
 export type Winner = "white" | "black" | "draw" | "unknown";
@@ -18,7 +32,10 @@ export type Winner = "white" | "black" | "draw" | "unknown";
  * produce an answer. Anything else — missing codes, a code we do not know, contradictory
  * codes — is "unknown", and an unknown result is never counted (it goes to moderator review).
  */
-export function deriveWinner(whiteResult: string | undefined, blackResult: string | undefined): Winner {
+export function deriveWinner(
+  whiteResult: string | undefined,
+  blackResult: string | undefined,
+): Winner {
   const w = whiteResult?.toLowerCase();
   const b = blackResult?.toLowerCase();
   if (!w || !b) return "unknown";
@@ -59,7 +76,8 @@ export function parseStartedAt(game: ChessComGame, endedAt: Date): string | null
   if (game.time_class === "daily") return null; // daily games span days; a start bound adds no safety
   const date = pgnTag(game.pgn, "UTCDate");
   const time = pgnTag(game.pgn, "UTCTime");
-  if (!date || !time || !/^\d{4}\.\d{2}\.\d{2}$/.test(date) || !/^\d{2}:\d{2}:\d{2}$/.test(time)) return null;
+  if (!date || !time || !/^\d{4}\.\d{2}\.\d{2}$/.test(date) || !/^\d{2}:\d{2}:\d{2}$/.test(time))
+    return null;
   const started = new Date(`${date.replaceAll(".", "-")}T${time}Z`);
   if (Number.isNaN(started.getTime())) return null;
   const spanMs = endedAt.getTime() - started.getTime();
@@ -81,7 +99,8 @@ export function normalizeArchiveGame(raw: unknown, archiveMonth: string): Normal
   const g = parsed.data;
 
   if (!CHESSCOM_GAME_URL.test(g.url)) return { game: null, skipped: "unexpected_url" };
-  if (typeof g.end_time !== "number" || g.end_time <= 0) return { game: null, skipped: "missing_end_time" };
+  if (typeof g.end_time !== "number" || g.end_time <= 0)
+    return { game: null, skipped: "missing_end_time" };
   const white = normalizeChessUsername(g.white.username);
   const black = normalizeChessUsername(g.black.username);
   if (!isValidChessUsername(white) || !isValidChessUsername(black) || white === black) {
@@ -116,7 +135,10 @@ export function normalizeArchiveGame(raw: unknown, archiveMonth: string): Normal
  * Keeps only games played between two linked members (both usernames in `members`).
  * Everything else in an archive is irrelevant to the college and is not stored.
  */
-export function filterMemberGames(games: ImportGameRow[], members: ReadonlySet<string>): ImportGameRow[] {
+export function filterMemberGames(
+  games: ImportGameRow[],
+  members: ReadonlySet<string>,
+): ImportGameRow[] {
   return games.filter((g) => members.has(g.white_username) && members.has(g.black_username));
 }
 

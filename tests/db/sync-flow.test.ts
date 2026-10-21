@@ -21,7 +21,8 @@ beforeAll(async () => {
   alice = await db.onboard({ username: "alice_f", name: "Alice" });
   bob = await db.onboard({ username: "bob_f", name: "Bob" });
   carol = await db.onboard({ username: "carol_f", name: "Carol" });
-  for (const p of [alice, bob, carol]) chess.setProfile({ username: p.username, player_id: p.playerId });
+  for (const p of [alice, bob, carol])
+    chess.setProfile({ username: p.username, player_id: p.playerId });
   chess.setProfile({ username: "stranger_x", player_id: 1 });
 });
 afterAll(async () => {
@@ -32,27 +33,56 @@ afterAll(async () => {
 const sleeps: number[] = [];
 const client = () =>
   new ChessComClient({
-    userAgent: "test", baseUrl: chess.baseUrl, minIntervalMs: 0, baseBackoffMs: 1, maxBackoffMs: 5, maxRetries: 2,
+    userAgent: "test",
+    baseUrl: chess.baseUrl,
+    minIntervalMs: 0,
+    baseBackoffMs: 1,
+    maxBackoffMs: 5,
+    maxRetries: 2,
     sleep: async (ms) => void sleeps.push(ms),
   });
 
 const store = () => createPgSyncStore(db);
 const run = (offsetMs = 0, limit = 10) =>
-  runChallengeSync(store(), client(), { limit, deadline: Date.now() + 30_000, now: () => new Date(Date.now() + offsetMs) });
+  runChallengeSync(store(), client(), {
+    limit,
+    deadline: Date.now() + 30_000,
+    now: () => new Date(Date.now() + offsetMs),
+  });
 
 /** Accepted three hours ago and due for checking now. */
 async function accepted(a: Player, b: Player, tc = "600"): Promise<string> {
   const id = (
-    await db.as(a.id).query("insert into public.challenges (recipient_id, time_control) values ($1, $2) returning id", [b.id, tc])
+    await db
+      .as(a.id)
+      .query(
+        "insert into public.challenges (recipient_id, time_control) values ($1, $2) returning id",
+        [b.id, tc],
+      )
   ).rows[0].id as string;
   await db.as(b.id).query("update public.challenges set status = 'accepted' where id = $1", [id]);
-  await db.admin.query("update public.challenges set accepted_at = now() - interval '3 hours', next_check_at = now() - interval '1 second' where id = $1", [id]);
+  await db.admin.query(
+    "update public.challenges set accepted_at = now() - interval '3 hours', next_check_at = now() - interval '1 second' where id = $1",
+    [id],
+  );
   return id;
 }
-const due = (id: string) => db.admin.query("update public.challenges set next_check_at = now() - interval '1 second' where id = $1", [id]);
-const challenge = async (id: string) => (await db.admin.query("select * from public.challenges where id = $1", [id])).rows[0];
-const attempts = async (id: string) => (await db.admin.query("select outcome, candidates, error, detail from public.match_sync_attempts where challenge_id = $1 order by id", [id])).rows;
-const matches = async (id: string) => (await db.admin.query("select * from public.college_matches where challenge_id = $1", [id])).rows;
+const due = (id: string) =>
+  db.admin.query(
+    "update public.challenges set next_check_at = now() - interval '1 second' where id = $1",
+    [id],
+  );
+const challenge = async (id: string) =>
+  (await db.admin.query("select * from public.challenges where id = $1", [id])).rows[0];
+const attempts = async (id: string) =>
+  (
+    await db.admin.query(
+      "select outcome, candidates, error, detail from public.match_sync_attempts where challenge_id = $1 order by id",
+      [id],
+    )
+  ).rows;
+const matches = async (id: string) =>
+  (await db.admin.query("select * from public.college_matches where challenge_id = $1", [id])).rows;
 
 beforeEach(async () => {
   await db.admin.query("delete from public.college_matches");
@@ -69,7 +99,12 @@ beforeEach(async () => {
 describe("automatic result synchronisation", () => {
   it("finds the real game, waits out the settle window, then verifies exactly once", async () => {
     const id = await accepted(alice, bob);
-    const game = chess.addGame({ white: "bob_f", black: "alice_f", winner: "white", endedAt: hoursAgo(1) });
+    const game = chess.addGame({
+      white: "bob_f",
+      black: "alice_f",
+      winner: "white",
+      endedAt: hoursAgo(1),
+    });
 
     // Pass 1: the game is found but must stay the only candidate for the settle window.
     const first = await run();
@@ -89,11 +124,28 @@ describe("automatic result synchronisation", () => {
     c = await challenge(id);
     expect(c.status).toBe("result_verified");
     const [m] = await matches(id);
-    expect(m).toMatchObject({ game_url: game.url, white_username: "bob_f", black_username: "alice_f", result: "white", source: "automatic", status: "verified" });
-    expect(m.evidence).toMatchObject({ rules_version: 1, checks: { only_candidate: true, players_match: true } });
+    expect(m).toMatchObject({
+      game_url: game.url,
+      white_username: "bob_f",
+      black_username: "alice_f",
+      result: "white",
+      source: "automatic",
+      status: "verified",
+    });
+    expect(m.evidence).toMatchObject({
+      rules_version: 1,
+      checks: { only_candidate: true, players_match: true },
+    });
 
     expect((await attempts(id)).map((a) => a.outcome)).toEqual(["candidate_found", "verified"]);
-    expect((await db.admin.query("select wins, losses, points from public.player_stats where user_id = $1", [bob.id])).rows[0]).toEqual({ wins: 1, losses: 0, points: 3 });
+    expect(
+      (
+        await db.admin.query(
+          "select wins, losses, points from public.player_stats where user_id = $1",
+          [bob.id],
+        )
+      ).rows[0],
+    ).toEqual({ wins: 1, losses: 0, points: 3 });
 
     // Idempotent: nothing left to do, and nothing changes.
     expect(await run(2 * 3_600_000)).toMatchObject({ claimed: 0 });
@@ -112,13 +164,27 @@ describe("automatic result synchronisation", () => {
     await due(id);
     expect(await run(2 * 3_600_000)).toMatchObject({ verified: 1 });
     expect((await matches(id))[0].result).toBe("draw");
-    expect((await attempts(id)).map((a) => a.outcome)).toEqual(["no_game_found", "candidate_found", "verified"]);
+    expect((await attempts(id)).map((a) => a.outcome)).toEqual([
+      "no_game_found",
+      "candidate_found",
+      "verified",
+    ]);
   });
 
   it("sets Needs review instead of guessing when several games qualify", async () => {
     const id = await accepted(alice, bob);
-    const g1 = chess.addGame({ white: "alice_f", black: "bob_f", winner: "white", endedAt: hoursAgo(2) });
-    const g2 = chess.addGame({ white: "bob_f", black: "alice_f", winner: "white", endedAt: hoursAgo(1) });
+    const g1 = chess.addGame({
+      white: "alice_f",
+      black: "bob_f",
+      winner: "white",
+      endedAt: hoursAgo(2),
+    });
+    const g2 = chess.addGame({
+      white: "bob_f",
+      black: "alice_f",
+      winner: "white",
+      endedAt: hoursAgo(1),
+    });
     const summary = await run();
     expect(summary).toMatchObject({ needsReview: 1, verified: 0 });
     const c = await challenge(id);
@@ -130,7 +196,13 @@ describe("automatic result synchronisation", () => {
     expect(last.detail.candidates).toEqual(expect.arrayContaining([g1.url, g2.url]));
     // Both players are told a human will decide.
     for (const p of [alice, bob]) {
-      expect((await db.as(p.id).query("select 1 from public.notifications where type = 'match_needs_review'")).rowCount).toBe(1);
+      expect(
+        (
+          await db
+            .as(p.id)
+            .query("select 1 from public.notifications where type = 'match_needs_review'")
+        ).rowCount,
+      ).toBe(1);
     }
   });
 
@@ -148,20 +220,40 @@ describe("automatic result synchronisation", () => {
   it("ignores games that cannot belong to the challenge", async () => {
     const id = await accepted(alice, bob, "600");
     chess.addGame({ white: "alice_f", black: "bob_f", endedAt: hoursAgo(5) }); // before acceptance
-    chess.addGame({ white: "alice_f", black: "bob_f", endedAt: hoursAgo(1), timeControl: "180", timeClass: "blitz" }); // other control
+    chess.addGame({
+      white: "alice_f",
+      black: "bob_f",
+      endedAt: hoursAgo(1),
+      timeControl: "180",
+      timeClass: "blitz",
+    }); // other control
     chess.addGame({ white: "alice_f", black: "bob_f", endedAt: hoursAgo(1), rules: "chess960" });
     chess.addGame({ white: "alice_f", black: "stranger_x", endedAt: hoursAgo(1) }); // non-member opponent
     expect(await run()).toMatchObject({ waiting: 1, verified: 0 });
     expect((await challenge(id)).status).toBe("waiting_for_game");
-    const stored = (await db.admin.query("select white_username, black_username from public.imported_chess_games")).rows;
-    expect(stored.every((g) => g.black_username !== "stranger_x" && g.white_username !== "stranger_x")).toBe(true);
+    const stored = (
+      await db.admin.query("select white_username, black_username from public.imported_chess_games")
+    ).rows;
+    expect(
+      stored.every((g) => g.black_username !== "stranger_x" && g.white_username !== "stranger_x"),
+    ).toBe(true);
     const rejected = (await attempts(id))[0]!.detail.rejected as { reason: string }[];
-    expect(rejected.map((r) => r.reason).sort()).toEqual(["ended_before_acceptance", "time_control_mismatch", "unsupported_variant"]);
+    expect(rejected.map((r) => r.reason).sort()).toEqual([
+      "ended_before_acceptance",
+      "time_control_mismatch",
+      "unsupported_variant",
+    ]);
   });
 
   it("never counts a result it cannot read", async () => {
     const id = await accepted(alice, bob);
-    chess.addGame({ white: "alice_f", black: "bob_f", endedAt: hoursAgo(1), whiteResult: "mystery", blackResult: "unknown" });
+    chess.addGame({
+      white: "alice_f",
+      black: "bob_f",
+      endedAt: hoursAgo(1),
+      whiteResult: "mystery",
+      blackResult: "unknown",
+    });
     expect(await run()).toMatchObject({ needsReview: 1, verified: 0 });
     expect((await attempts(id)).at(-1)!.outcome).toBe("unknown_result");
     expect(await matches(id)).toHaveLength(0);
@@ -169,9 +261,15 @@ describe("automatic result synchronisation", () => {
 
   it("moves to manual review when no game ever appears within the window", async () => {
     const id = await accepted(alice, bob);
-    await db.admin.query("update public.challenges set giveup_at = now() - interval '1 minute' where id = $1", [id]);
+    await db.admin.query(
+      "update public.challenges set giveup_at = now() - interval '1 minute' where id = $1",
+      [id],
+    );
     expect(await run()).toMatchObject({ needsReview: 1 });
-    expect(await challenge(id)).toMatchObject({ status: "needs_review", review_reason: expect.stringMatching(/no matching Chess.com game/) });
+    expect(await challenge(id)).toMatchObject({
+      status: "needs_review",
+      review_reason: expect.stringMatching(/no matching Chess.com game/),
+    });
     expect((await attempts(id)).at(-1)!.outcome).toBe("gave_up");
   });
 
@@ -193,7 +291,10 @@ describe("automatic result synchronisation", () => {
 
   it("hands over to a moderator if archives stay unavailable until the deadline", async () => {
     const id = await accepted(alice, bob);
-    await db.admin.query("update public.challenges set giveup_at = now() - interval '1 minute' where id = $1", [id]);
+    await db.admin.query(
+      "update public.challenges set giveup_at = now() - interval '1 minute' where id = $1",
+      [id],
+    );
     chess.fail(/\/games\//, 503, 99);
     await run();
     expect((await challenge(id)).status).toBe("needs_review");
@@ -227,14 +328,25 @@ describe("automatic result synchronisation", () => {
     const id = await accepted(alice, bob);
     chess.addGame({ white: "alice_f", black: "bob_f", endedAt: hoursAgo(1) });
     await run();
-    const imported = (await db.admin.query("select count(*)::int as n from public.imported_chess_games")).rows[0].n;
+    const imported = (
+      await db.admin.query("select count(*)::int as n from public.imported_chess_games")
+    ).rows[0].n;
     expect(imported).toBe(1); // the game appears in BOTH archives but is stored once
     chess.resetCounters();
     await due(id);
     await run(10 * 60_000);
     expect(chess.conditionalHits).toBe(2); // one 304 per player
-    expect((await db.admin.query("select count(*)::int as n from public.imported_chess_games")).rows[0].n).toBe(1);
-    expect((await db.admin.query("select etag from public.chess_archive_state where chess_username = 'alice_f'")).rows).toHaveLength(1);
+    expect(
+      (await db.admin.query("select count(*)::int as n from public.imported_chess_games")).rows[0]
+        .n,
+    ).toBe(1);
+    expect(
+      (
+        await db.admin.query(
+          "select etag from public.chess_archive_state where chess_username = 'alice_f'",
+        )
+      ).rows,
+    ).toHaveLength(1);
   });
 
   it("talks to Chess.com strictly one request at a time", async () => {
@@ -250,16 +362,30 @@ describe("automatic result synchronisation", () => {
     const id = await accepted(alice, bob);
     chess.addGame({ white: "alice_f", black: "carol_f", endedAt: hoursAgo(1) }); // a different pair
     expect(await run()).toMatchObject({ waiting: 1 });
-    expect((await db.admin.query("select count(*)::int as n from public.imported_chess_games where black_username = 'carol_f'")).rows[0].n).toBe(1);
+    expect(
+      (
+        await db.admin.query(
+          "select count(*)::int as n from public.imported_chess_games where black_username = 'carol_f'",
+        )
+      ).rows[0].n,
+    ).toBe(1);
     expect(await matches(id)).toHaveLength(0);
   });
 
   it("expires unanswered challenges as part of the same job", async () => {
-    const c = await db.as(alice.id).query("insert into public.challenges (recipient_id, time_control) values ($1, '600') returning id", [carol.id]);
+    const c = await db
+      .as(alice.id)
+      .query(
+        "insert into public.challenges (recipient_id, time_control) values ($1, '600') returning id",
+        [carol.id],
+      );
     const conn = await db.admin.connect();
     try {
       await conn.query("alter table public.challenges disable trigger challenges_before_update");
-      await conn.query("update public.challenges set expires_at = now() - interval '1 minute' where id = $1", [c.rows[0].id]);
+      await conn.query(
+        "update public.challenges set expires_at = now() - interval '1 minute' where id = $1",
+        [c.rows[0].id],
+      );
       await conn.query("alter table public.challenges enable trigger challenges_before_update");
     } finally {
       conn.release();

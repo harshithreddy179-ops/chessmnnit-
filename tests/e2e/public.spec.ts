@@ -12,23 +12,44 @@ test.describe("public pages with real data", () => {
     const b = await player({ username: "pub_bhavna", name: "Bhavna Bose", rapid: 1650 });
     const c = await player({ username: "pub_chirag", name: "Chirag Chopra", rapid: 1400 });
     // Rating history: enough points over several days for a chart for Alice, too little for Bhavna.
-    for (const [days, rating] of [[6, 1750], [4, 1775], [2, 1790], [0, 1810]] as const) {
-      await db.admin.query("insert into public.chess_rating_history (user_id, time_class, rating, observed_at) values ($1, 'rapid', $2, now() - ($3 || ' days')::interval)", [a.id, rating, String(days)]);
+    for (const [days, rating] of [
+      [6, 1750],
+      [4, 1775],
+      [2, 1790],
+      [0, 1810],
+    ] as const) {
+      await db.admin.query(
+        "insert into public.chess_rating_history (user_id, time_class, rating, observed_at) values ($1, 'rapid', $2, now() - ($3 || ' days')::interval)",
+        [a.id, rating, String(days)],
+      );
     }
-    await db.admin.query("insert into public.chess_rating_history (user_id, time_class, rating) values ($1, 'rapid', 1650)", [b.id]);
+    await db.admin.query(
+      "insert into public.chess_rating_history (user_id, time_class, rating) values ($1, 'rapid', 1650)",
+      [b.id],
+    );
     // Verified college matches: Alice beats Bhavna twice, draws with Chirag.
     const add = (w: typeof a, bl: typeof a, r: string, n: number) =>
       db.admin.query(
         `insert into public.college_matches (game_url, white_user_id, black_user_id, white_username, black_username, result, time_control, time_class, ended_at, source)
          values ($1, $2, $3, $4, $5, $6, '600', 'rapid', now() - ($7 || ' hours')::interval, 'automatic')`,
-        [`https://www.chess.com/game/live/9100${n}`, w.id, bl.id, w.username, bl.username, r, String(n)],
+        [
+          `https://www.chess.com/game/live/9100${n}`,
+          w.id,
+          bl.id,
+          w.username,
+          bl.username,
+          r,
+          String(n),
+        ],
       );
     await add(a, b, "white", 3);
     await add(b, a, "black", 2);
     await add(a, c, "draw", 1);
   });
 
-  test("landing page shows live counts and previews, with no placeholder numbers", async ({ page }) => {
+  test("landing page shows live counts and previews, with no placeholder numbers", async ({
+    page,
+  }) => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /Play real games/ })).toBeVisible();
     const stats = page.locator("dl").first();
@@ -43,12 +64,16 @@ test.describe("public pages with real data", () => {
     await expect(page.getByText("not connected to its database")).toHaveCount(0);
   });
 
-  test("player directory searches, filters by rating and shows imported ratings with their category", async ({ page }) => {
+  test("player directory searches, filters by rating and shows imported ratings with their category", async ({
+    page,
+  }) => {
     await page.goto("/players");
     await expect(page.getByRole("row", { name: /Alice Anand/ })).toContainText("1810");
     await expect(page.getByRole("row", { name: /Alice Anand/ })).toContainText("Rapid");
     // Sorted by rating, highest first.
-    const names = await page.locator("tbody tr td:first-child a span.font-medium").allTextContents();
+    const names = await page
+      .locator("tbody tr td:first-child a span.font-medium")
+      .allTextContents();
     expect(names.indexOf("Alice Anand")).toBeLessThan(names.indexOf("Bhavna Bose"));
 
     await page.getByLabel("Search").fill("bhavna");
@@ -65,17 +90,24 @@ test.describe("public pages with real data", () => {
     await expect(page.getByText("No players match those filters")).toBeVisible();
   });
 
-  test("player profile separates imported ratings from college results and charts history only when it can", async ({ page }) => {
+  test("player profile separates imported ratings from college results and charts history only when it can", async ({
+    page,
+  }) => {
     await page.goto("/players/pub_alice");
     await expect(page.getByRole("heading", { name: "Alice Anand" })).toBeVisible();
     await expect(page.getByText("MNNIT student", { exact: true })).toBeVisible();
     await expect(page.getByText("Chess.com verified", { exact: true })).toBeVisible();
-    await expect(page.getByText("not earned exclusively against MNNIT students").first()).toBeVisible();
+    await expect(
+      page.getByText("not earned exclusively against MNNIT students").first(),
+    ).toBeVisible();
     // College record: 2 wins... Alice: win vs Bhavna (white), win vs Bhavna (Bhavna white lost), draw vs Chirag.
     await expect(page.getByText("Win rate").first()).toBeVisible();
     await expect(page.getByText("2 wins ÷ 3 games")).toBeVisible();
     await expect(page.getByRole("img", { name: /Rapid rating history/ })).toBeVisible();
-    await expect(page.getByRole("link", { name: /View.*game/ }).first()).toHaveAttribute("href", /chess\.com\/game\/live\//);
+    await expect(page.getByRole("link", { name: /View.*game/ }).first()).toHaveAttribute(
+      "href",
+      /chess\.com\/game\/live\//,
+    );
 
     await page.goto("/players/pub_bhavna");
     await expect(page.getByRole("img", { name: /rating history/ })).toHaveCount(0); // a single data point is not a trend

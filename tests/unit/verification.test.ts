@@ -8,29 +8,55 @@ const client = (impl: () => Promise<unknown>) => ({ getProfile: impl }) as never
 
 describe("profile code verification", () => {
   it("verifies when the code is in the Location field, case- and spacing-tolerant", async () => {
-    const r = await checkProfileCode(client(async () => ({ username: "Alice_S", player_id: 99, location: `Prayagraj ${CODE.toLowerCase()} ` })), { username: "alice_s", code: CODE });
+    const r = await checkProfileCode(
+      client(async () => ({
+        username: "Alice_S",
+        player_id: 99,
+        location: `Prayagraj ${CODE.toLowerCase()} `,
+      })),
+      { username: "alice_s", code: CODE },
+    );
     expect(r).toEqual({ verified: true, username: "alice_s", playerId: 99 });
   });
 
   it("also accepts the code in the Name field", async () => {
-    const r = await checkProfileCode(client(async () => ({ username: "alice_s", name: `Alice ${CODE}` })), { username: "alice_s", code: CODE });
+    const r = await checkProfileCode(
+      client(async () => ({ username: "alice_s", name: `Alice ${CODE}` })),
+      { username: "alice_s", code: CODE },
+    );
     expect(r).toMatchObject({ verified: true, playerId: null });
   });
 
   it("does not verify when the code is absent, different, or the profile has no editable text", async () => {
-    for (const profile of [{ username: "alice_s" }, { username: "alice_s", location: "Prayagraj" }, { username: "alice_s", location: "MNNIT-AAAAAAAA" }, { username: "alice_s", name: "Alice" }]) {
-      expect(await checkProfileCode(client(async () => profile), { username: "alice_s", code: CODE })).toMatchObject({ verified: false, reason: "code_not_found" });
+    for (const profile of [
+      { username: "alice_s" },
+      { username: "alice_s", location: "Prayagraj" },
+      { username: "alice_s", location: "MNNIT-AAAAAAAA" },
+      { username: "alice_s", name: "Alice" },
+    ]) {
+      expect(
+        await checkProfileCode(
+          client(async () => profile),
+          { username: "alice_s", code: CODE },
+        ),
+      ).toMatchObject({ verified: false, reason: "code_not_found" });
     }
   });
 
   it("refuses to verify when the API returns a different account than the one claimed", async () => {
-    const r = await checkProfileCode(client(async () => ({ username: "someone_else", location: CODE })), { username: "alice_s", code: CODE });
+    const r = await checkProfileCode(
+      client(async () => ({ username: "someone_else", location: CODE })),
+      { username: "alice_s", code: CODE },
+    );
     expect(r).toMatchObject({ verified: false, reason: "username_mismatch" });
   });
 
   it("refuses closed accounts", async () => {
     for (const status of ["closed", "closed:fair_play_violations"]) {
-      const r = await checkProfileCode(client(async () => ({ username: "alice_s", location: CODE, status })), { username: "alice_s", code: CODE });
+      const r = await checkProfileCode(
+        client(async () => ({ username: "alice_s", location: CODE, status })),
+        { username: "alice_s", code: CODE },
+      );
       expect(r).toMatchObject({ verified: false, reason: "account_closed" });
     }
   });
@@ -45,10 +71,22 @@ describe("profile code verification", () => {
       [new ChessComError("invalid_response", "x"), "unavailable"],
     ];
     for (const [error, reason] of cases) {
-      const r = await checkProfileCode(client(async () => { throw error; }), { username: "alice_s", code: CODE });
+      const r = await checkProfileCode(
+        client(async () => {
+          throw error;
+        }),
+        { username: "alice_s", code: CODE },
+      );
       expect(r).toMatchObject({ verified: false, reason });
     }
-    expect(await checkProfileCode(client(async () => { throw new Error("boom"); }), { username: "alice_s", code: CODE })).toMatchObject({ verified: false, reason: "unavailable" });
+    expect(
+      await checkProfileCode(
+        client(async () => {
+          throw new Error("boom");
+        }),
+        { username: "alice_s", code: CODE },
+      ),
+    ).toMatchObject({ verified: false, reason: "unavailable" });
   });
 
   it("will not match on trivially short or empty codes", () => {
@@ -65,13 +103,18 @@ describe("profile code verification", () => {
 describe("provider status (honest about what works)", () => {
   it("reports OAuth as awaiting approval and never as available", () => {
     for (const oauthCredentialsPresent of [false, true]) {
-      const oauth = describeProviders({ profileCodeEnabled: true, oauthCredentialsPresent }).find((p) => p.id === "oauth")!;
+      const oauth = describeProviders({ profileCodeEnabled: true, oauthCredentialsPresent }).find(
+        (p) => p.id === "oauth",
+      )!;
       expect(oauth.state).toBe("awaiting_approval");
     }
   });
 
   it("explains an adapter gap when credentials exist but no adapter does", () => {
-    const oauth = describeProviders({ profileCodeEnabled: true, oauthCredentialsPresent: true }).find((p) => p.id === "oauth")!;
+    const oauth = describeProviders({
+      profileCodeEnabled: true,
+      oauthCredentialsPresent: true,
+    }).find((p) => p.id === "oauth")!;
     expect(oauth.description).toMatch(/not been implemented/i);
   });
 

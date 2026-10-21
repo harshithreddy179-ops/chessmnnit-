@@ -13,7 +13,9 @@ function nonEmpty(value: string | undefined): string | null {
 
 /** Supabase secret / service-role key. Bypasses RLS — only use in trusted server code. */
 export function getSupabaseSecretKey(): string | null {
-  return nonEmpty(process.env.SUPABASE_SECRET_KEY) ?? nonEmpty(process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return (
+    nonEmpty(process.env.SUPABASE_SECRET_KEY) ?? nonEmpty(process.env.SUPABASE_SERVICE_ROLE_KEY)
+  );
 }
 
 export function getCronSecret(): string | null {
@@ -78,7 +80,10 @@ export function getIntegrationStatus(): IntegrationStatus {
     supabase: isSupabaseConfigured() ? "ready" : "missing",
     serviceRole: getSupabaseSecretKey() ? "ready" : "missing",
     cron: getCronSecret() ? "ready" : "missing",
-    chessApi: { state: chess.contact ? "ready" : "partial", contactConfigured: Boolean(chess.contact) },
+    chessApi: {
+      state: chess.contact ? "ready" : "partial",
+      contactConfigured: Boolean(chess.contact),
+    },
     chessProfileCode: chess.profileCodeVerification,
     chessOAuth: getChessComOAuthCredentials()
       ? "credentials_present_adapter_missing"

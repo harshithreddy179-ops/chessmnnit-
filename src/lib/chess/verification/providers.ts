@@ -37,7 +37,8 @@ export function describeProviders(env: ProviderEnv): ProviderStatus[] {
       id: "admin_review",
       label: "Administrator review",
       state: "available",
-      description: "A verification administrator confirms ownership manually. Use this if the code check cannot work for you.",
+      description:
+        "A verification administrator confirms ownership manually. Use this if the code check cannot work for you.",
     },
   ];
 }

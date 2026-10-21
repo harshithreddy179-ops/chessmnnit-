@@ -32,7 +32,9 @@ export function mapDatabaseError(error: PgLikeError): ApiError {
   const sep = raw.indexOf(":");
   const looksCoded = sep > 0 && /^[a-z_]+$/.test(raw.slice(0, sep));
   const code = looksCoded ? raw.slice(0, sep) : undefined;
-  const human = looksCoded ? raw.slice(sep + 1).trim() || raw.slice(0, sep).replaceAll("_", " ") : raw.replaceAll("_", " ");
+  const human = looksCoded
+    ? raw.slice(sep + 1).trim() || raw.slice(0, sep).replaceAll("_", " ")
+    : raw.replaceAll("_", " ");
 
   switch (error.code) {
     case "42501":
@@ -40,17 +42,35 @@ export function mapDatabaseError(error: PgLikeError): ApiError {
     case "28000":
       return new ApiError(401, "unauthenticated", "Please sign in again.");
     case "53400":
-      return new ApiError(429, "rate_limited", human.startsWith("rate limited") ? "You are doing that too often. Please wait a while and try again." : human);
+      return new ApiError(
+        429,
+        "rate_limited",
+        human.startsWith("rate limited")
+          ? "You are doing that too often. Please wait a while and try again."
+          : human,
+      );
     case "P0002":
       return new ApiError(404, "not_found", "That item could not be found.");
     case "22023":
     case "22P02":
     case "23514":
-      return new ApiError(400, code ?? "invalid_input", looksCoded ? human : "Some of the information is not valid.");
+      return new ApiError(
+        400,
+        code ?? "invalid_input",
+        looksCoded ? human : "Some of the information is not valid.",
+      );
     case "23505":
-      return new ApiError(409, code ?? "conflict", looksCoded ? human : "That conflicts with something that already exists.");
+      return new ApiError(
+        409,
+        code ?? "conflict",
+        looksCoded ? human : "That conflicts with something that already exists.",
+      );
     case "23503":
-      return new ApiError(400, "invalid_reference", "That refers to something that does not exist.");
+      return new ApiError(
+        400,
+        "invalid_reference",
+        "That refers to something that does not exist.",
+      );
     case "P0001":
       return new ApiError(409, code ?? "rejected", human);
     default:
@@ -58,7 +78,11 @@ export function mapDatabaseError(error: PgLikeError): ApiError {
       if (/permission denied|row-level security|violates row-level/i.test(raw)) {
         return new ApiError(403, "forbidden", "You are not allowed to do that.");
       }
-      return new ApiError(500, "internal_error", "Something went wrong on our side. Please try again.");
+      return new ApiError(
+        500,
+        "internal_error",
+        "Something went wrong on our side. Please try again.",
+      );
   }
 }
 
@@ -83,7 +107,8 @@ export function assertSameOrigin(req: Request) {
     } catch {
       originHost = null;
     }
-    if (!host || originHost !== host) throw new ApiError(403, "cross_site", "Cross-site requests are not allowed.");
+    if (!host || originHost !== host)
+      throw new ApiError(403, "cross_site", "Cross-site requests are not allowed.");
   }
 }
 
@@ -93,7 +118,8 @@ export async function readJson<T>(req: Request, schema: ZodType<T>): Promise<T> 
   const declared = Number(req.headers.get("content-length") ?? 0);
   if (declared > MAX_BODY_BYTES) throw new ApiError(413, "too_large", "That request is too large.");
   const text = await req.text();
-  if (text.length > MAX_BODY_BYTES) throw new ApiError(413, "too_large", "That request is too large.");
+  if (text.length > MAX_BODY_BYTES)
+    throw new ApiError(413, "too_large", "That request is too large.");
   let value: unknown = {};
   if (text.trim()) {
     try {
@@ -160,7 +186,9 @@ export function apiRoute<TBody = undefined>(
       }
       // Never echo internals (or secrets) to the client; log a trimmed message server-side.
       console.error("[api] unexpected error:", error instanceof Error ? error.message : "unknown");
-      return fail(new ApiError(500, "internal_error", "Something went wrong on our side. Please try again."));
+      return fail(
+        new ApiError(500, "internal_error", "Something went wrong on our side. Please try again."),
+      );
     }
   };
 }

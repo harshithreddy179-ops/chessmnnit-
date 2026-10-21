@@ -20,7 +20,10 @@ import type { CheckResult } from "@/lib/chess/verification/types";
  * profile edit can take a while to appear in the API. "code_not_found" therefore means "not
  * visible yet", and the student may retry or fall back to administrator review.
  */
-export function profileContainsCode(profile: { location?: string; name?: string }, code: string): boolean {
+export function profileContainsCode(
+  profile: { location?: string; name?: string },
+  code: string,
+): boolean {
   const needle = code.trim().toUpperCase();
   if (needle.length < 8) return false;
   const haystack = [profile.location, profile.name].filter(Boolean).join("\n").toUpperCase();
@@ -46,7 +49,8 @@ export async function checkProfileCode(
     return { verified: true, username: expected, playerId: profile.player_id ?? null };
   } catch (error) {
     if (error instanceof ChessComError) {
-      if (error.kind === "not_found" || error.kind === "gone") return { verified: false, reason: "profile_not_found" };
+      if (error.kind === "not_found" || error.kind === "gone")
+        return { verified: false, reason: "profile_not_found" };
       if (error.kind === "moved") return { verified: false, reason: "renamed" };
       if (error.kind === "rate_limited") return { verified: false, reason: "rate_limited" };
       return { verified: false, reason: "unavailable", detail: error.kind };

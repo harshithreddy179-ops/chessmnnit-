@@ -24,7 +24,12 @@ export interface ChartGeometry {
 }
 
 /** Maps points into an SVG viewBox (padded), keeping the y-axis from collapsing on flat data. */
-export function chartGeometry(points: readonly RatingPoint[], width: number, height: number, pad = 12): ChartGeometry {
+export function chartGeometry(
+  points: readonly RatingPoint[],
+  width: number,
+  height: number,
+  pad = 12,
+): ChartGeometry {
   const sorted = [...points].sort((a, b) => a.t.localeCompare(b.t));
   const times = sorted.map((p) => new Date(p.t).getTime());
   const t0 = times[0]!;
@@ -36,9 +41,17 @@ export function chartGeometry(points: readonly RatingPoint[], width: number, hei
     min -= 10;
     max += 10;
   }
-  const x = (t: number) => (t1 === t0 ? width / 2 : pad + ((t - t0) / (t1 - t0)) * (width - pad * 2));
+  const x = (t: number) =>
+    t1 === t0 ? width / 2 : pad + ((t - t0) / (t1 - t0)) * (width - pad * 2);
   const y = (r: number) => height - pad - ((r - min) / (max - min)) * (height - pad * 2);
-  const dots = sorted.map((p, i) => ({ x: x(times[i]!), y: y(p.rating), rating: p.rating, t: p.t }));
-  const path = dots.map((d, i) => `${i === 0 ? "M" : "L"}${d.x.toFixed(1)},${d.y.toFixed(1)}`).join(" ");
+  const dots = sorted.map((p, i) => ({
+    x: x(times[i]!),
+    y: y(p.rating),
+    rating: p.rating,
+    t: p.t,
+  }));
+  const path = dots
+    .map((d, i) => `${i === 0 ? "M" : "L"}${d.x.toFixed(1)},${d.y.toFixed(1)}`)
+    .join(" ");
   return { path, min, max, first: sorted[0]!.t, last: sorted[sorted.length - 1]!.t, dots };
 }
