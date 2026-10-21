@@ -17,27 +17,25 @@ export function adminUrl(db = "postgres"): string {
   return url.toString();
 }
 
-export default async function setup() {
-  const root = process.cwd();
+/** Creates `name` from scratch and applies the Supabase shim plus every migration, in order. */
+export async function createMigratedDatabase(name: string, root = process.cwd()): Promise<void> {
   const admin = new Client({ connectionString: adminUrl() });
   try {
     await admin.connect();
   } catch (error) {
     throw new Error(
-      `Cannot reach PostgreSQL for the database tests (${(error as Error).message}). ` +
-        "Start a local server and set TEST_DATABASE_ADMIN_URL (see docs/TESTING.md).",
+      `Cannot reach PostgreSQL (${(error as Error).message}). Start a local server and set TEST_DATABASE_ADMIN_URL (see docs/TESTING.md).`,
     );
   }
-
-  const exists = await admin.query("select 1 from pg_database where datname = $1", [TEMPLATE_DB]);
+  const exists = await admin.query("select 1 from pg_database where datname = $1", [name]);
   if (exists.rowCount) {
-    await admin.query(`alter database ${TEMPLATE_DB} is_template false`);
-    await admin.query(`drop database ${TEMPLATE_DB} with (force)`);
+    await admin.query(`alter database ${name} is_template false`);
+    await admin.query(`drop database ${name} with (force)`);
   }
-  await admin.query(`create database ${TEMPLATE_DB}`);
+  await admin.query(`create database ${name}`);
   await admin.end();
 
-  const db = new Client({ connectionString: adminUrl(TEMPLATE_DB) });
+  const db = new Client({ connectionString: adminUrl(name) });
   await db.connect();
   await db.query(readFileSync(join(root, "tests/db/supabase-shim.sql"), "utf8"));
   const dir = join(root, "supabase/migrations");
@@ -49,7 +47,10 @@ export default async function setup() {
     }
   }
   await db.end();
+}
 
+export default async function setup() {
+  await createMigratedDatabase(TEMPLATE_DB);
   const finish = new Client({ connectionString: adminUrl() });
   await finish.connect();
   await finish.query(`alter database ${TEMPLATE_DB} is_template true`);

@@ -15,6 +15,8 @@ export function getChessClient(): ChessComClient {
   const config = getChessComConfig();
   shared = new ChessComClient({
     userAgent: buildUserAgent(getAppUrl(), config.contact),
+    // Only for tests / staging against a stand-in service. Production uses Chess.com's documented host.
+    baseUrl: process.env.CHESSCOM_API_BASE_URL?.trim() || undefined,
     minIntervalMs: config.minRequestIntervalMs,
     timeoutMs: config.timeoutMs,
     maxRetries: config.maxRetries,

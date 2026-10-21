@@ -30,11 +30,16 @@ export function UserMenu({ name, avatarUrl, isAdmin }: { name: string; avatarUrl
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuSeparator />
-        <form action="/auth/signout" method="post">
-          <DropdownMenuItem asChild>
-            <button type="submit" className="w-full"><LogOut aria-hidden /> Sign out</button>
-          </DropdownMenuItem>
-        </form>
+        <DropdownMenuItem
+          // A <form> inside the menu would be unmounted (menu closes) before the browser submits it,
+          // so the request is made explicitly and the page is reloaded to drop all client state.
+          onSelect={(event) => {
+            event.preventDefault();
+            void fetch("/auth/signout", { method: "POST", credentials: "same-origin" }).finally(() => window.location.assign("/"));
+          }}
+        >
+          <LogOut aria-hidden /> Sign out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );

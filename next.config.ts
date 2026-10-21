@@ -12,7 +12,7 @@ function supabaseOrigins(): { http: string; ws: string } {
   try {
     if (raw) {
       const url = new URL(raw);
-      return { http: url.origin, ws: `wss://${url.host}` };
+      return { http: url.origin, ws: `${url.protocol === "http:" ? "ws" : "wss"}://${url.host}` };
     }
   } catch {
     // fall through to wildcard

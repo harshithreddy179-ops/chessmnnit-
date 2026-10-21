@@ -61,7 +61,7 @@ const RESULT: Record<string, [string, string]> = {
 
 let counter = 5_000_000;
 
-export async function startFakeChessCom(): Promise<FakeChessCom> {
+export async function startFakeChessCom(port = 0): Promise<FakeChessCom> {
   const profiles = new Map<string, FakeProfile>();
   const stats = new Map<string, Record<string, unknown>>();
   const archives = new Map<string, unknown[]>(); // key: `${username}|${YYYY/MM}`
@@ -161,7 +161,7 @@ export async function startFakeChessCom(): Promise<FakeChessCom> {
     }
   });
 
-  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  await new Promise<void>((resolve) => server.listen(port, "127.0.0.1", resolve));
   state.baseUrl = `http://127.0.0.1:${(server.address() as AddressInfo).port}/pub`;
   return state;
 }

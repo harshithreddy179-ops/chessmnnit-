@@ -41,7 +41,10 @@ async function fetchLanding() {
 }
 
 /** Public landing data: identical for every visitor, so it is cached for a minute. */
-export const getLandingData = unstable_cache(fetchLanding, ["landing-v1"], { revalidate: 60, tags: ["public-data"] });
+export const getLandingData = unstable_cache(fetchLanding, ["landing-v1"], {
+  revalidate: Math.max(1, Number.parseInt(process.env.PUBLIC_DATA_REVALIDATE_SECONDS ?? "60", 10) || 60),
+  tags: ["public-data"],
+});
 
 export interface PageParams {
   page: number;

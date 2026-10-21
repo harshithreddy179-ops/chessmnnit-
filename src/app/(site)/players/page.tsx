@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
 import { Search, Users } from "lucide-react";
 import { DirectoryTable } from "@/components/data/directory-table";
+import { ListSkeleton } from "@/components/data/loading-skeleton";
 import { EmptyState, PageHeader, Pagination } from "@/components/data/primitives";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -12,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { TIME_CLASSES, TIME_CLASS_LABEL } from "@/lib/chess/constants";
 import { intParam, one, optionalInt, pick, qs, type RawSearchParams } from "@/lib/search-params";
 import { getAppContext } from "@/server/auth";
-import { getDirectory, getTimeControls } from "@/server/data/public";
+import { getDirectory, getTimeControls, type DirectoryQuery } from "@/server/data/public";
 
 export const metadata: Metadata = {
   title: "Players",
@@ -32,12 +34,6 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
   const maxRating = optionalInt(sp.max, 0, 4000);
   const preferred = TIME_CLASSES.includes(one(sp.prefers) as never) ? (one(sp.prefers) as (typeof TIME_CLASSES)[number]) : undefined;
   const openOnly = one(sp.open) === "1";
-
-  const [ctx, directory, options] = await Promise.all([
-    getAppContext(),
-    getDirectory({ page, pageSize: PAGE_SIZE, search, timeClass, minRating, maxRating, preferred, openOnly, sort }),
-    getTimeControls(),
-  ]);
 
   const base = { q: search, category: timeClass, sort, min: minRating, max: maxRating, prefers: preferred, open: openOnly ? 1 : undefined };
   const filtered = Boolean(search || minRating !== undefined || maxRating !== undefined || preferred || openOnly);
@@ -95,6 +91,23 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
         </div>
       </form>
 
+      <Suspense key={JSON.stringify([search, timeClass, sort, page, minRating, maxRating, preferred, openOnly])} fallback={<ListSkeleton />}>
+        <Results query={{ page, pageSize: PAGE_SIZE, search, timeClass, minRating, maxRating, preferred, openOnly, sort }} filtered={filtered} base={base} />
+      </Suspense>
+    </div>
+  );
+}
+
+/**
+ * The results stream in behind a Suspense boundary inside the page. There is deliberately no
+ * route-level loading.tsx for /players: it would also wrap /players/[username], and a profile
+ * that calls notFound() after streaming started would answer HTTP 200 instead of 404.
+ */
+async function Results({ query, filtered, base }: { query: DirectoryQuery; filtered: boolean; base: Record<string, string | number | undefined> }) {
+  const [ctx, directory, options] = await Promise.all([getAppContext(), getDirectory(query), getTimeControls()]);
+  const { page, pageSize, timeClass } = query;
+  return (
+    <>
       {!directory.configured ? (
         <Alert variant="warning" title="Player directory is awaiting configuration">The database connection has not been set up for this deployment yet.</Alert>
       ) : directory.error ? (
@@ -107,9 +120,9 @@ export default async function PlayersPage({ searchParams }: { searchParams: Prom
       ) : (
         <>
           <DirectoryTable rows={directory.rows} timeClass={timeClass} viewerId={ctx?.user.id ?? null} viewerApproved={ctx?.profile.is_approved ?? false} options={options} />
-          <Pagination page={page} pageSize={PAGE_SIZE} total={directory.total} hrefFor={(p) => `/players${qs({ ...base, page: p > 1 ? p : undefined })}`} />
+          <Pagination page={page} pageSize={pageSize} total={directory.total} hrefFor={(p) => `/players${qs({ ...base, page: p > 1 ? p : undefined })}`} />
         </>
       )}
-    </div>
+    </>
   );
 }

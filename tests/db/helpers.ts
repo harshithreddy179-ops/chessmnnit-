@@ -70,7 +70,14 @@ export async function createTestDb(): Promise<TestDb> {
   await root.connect();
   await root.query(`create database ${name} template ${TEMPLATE_DB}`);
   await root.end();
+  return bindTestDb(name, true);
+}
 
+/**
+ * Wraps an existing, already-migrated database with the actor helpers (anon / authenticated /
+ * service_role, onboarding, admin grants). `dropOnClose` removes the database afterwards.
+ */
+export function bindTestDb(name: string, dropOnClose: boolean): TestDb {
   const admin = new Pool({ connectionString: adminUrl(name), max: 12 });
 
   const db: TestDb = {
@@ -124,6 +131,7 @@ export async function createTestDb(): Promise<TestDb> {
 
     async close() {
       await admin.end();
+      if (!dropOnClose) return;
       const c = new Client({ connectionString: adminUrl() });
       await c.connect();
       await c.query(`drop database if exists ${name} with (force)`);
