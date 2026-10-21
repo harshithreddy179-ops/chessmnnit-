@@ -1,4 +1,3 @@
-/* eslint-disable */
 // GENERATED FILE — do not edit. Regenerate with `npm run db:types` after changing a migration.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 

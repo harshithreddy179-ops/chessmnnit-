@@ -32,7 +32,7 @@ const MAX_MONTHS = 3;
  * succeed for the pass to count: if one archive is unavailable, a competing game could be
  * hiding in it, so the caller must not verify anything from a partial view.
  */
-async function refreshArchives(
+export async function refreshArchives(
   store: SyncStore,
   client: Archives,
   c: ClaimedChallenge,

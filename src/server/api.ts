@@ -68,7 +68,7 @@ export function unwrap<T>(result: { data: T | null; error: PgLikeError | null })
   return result.data as T;
 }
 
-function assertSameOrigin(req: Request) {
+export function assertSameOrigin(req: Request) {
   if (["GET", "HEAD", "OPTIONS"].includes(req.method)) return;
   const site = req.headers.get("sec-fetch-site");
   if (site && site !== "same-origin" && site !== "none") {

@@ -14,9 +14,13 @@ export type Db = SupabaseClient<Database>;
  * the user's JWT and are therefore subject to Row Level Security.
  */
 export async function createSupabaseServerClient(): Promise<Db | null> {
+  // Read the request cookies BEFORE looking at configuration. This opts every caller into
+  // request-time rendering no matter what the environment looked like at build time;
+  // otherwise a build without env vars would prerender the signed-out state and serve it
+  // forever once the variables are provided at runtime.
+  const cookieStore = await cookies();
   const config = getPublicSupabaseConfig();
   if (!config) return null;
-  const cookieStore = await cookies();
   return createServerClient<Database>(config.url, config.key, {
     cookies: {
       getAll() {

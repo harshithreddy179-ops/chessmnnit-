@@ -134,8 +134,7 @@ async function main() {
     ([name, labels]) => `    ${name}: [${labels.map((l) => JSON.stringify(l)).join(", ")}],`,
   );
 
-  const out = `/* eslint-disable */
-// GENERATED FILE — do not edit. Regenerate with \`npm run db:types\` after changing a migration.
+  const out = `// GENERATED FILE — do not edit. Regenerate with \`npm run db:types\` after changing a migration.
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[]
 
 export type Database = {

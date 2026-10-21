@@ -105,9 +105,8 @@ describe("finalizing a match", () => {
     await db.service.query("select public.recompute_all_stats()");
     await db.service.query("select public.recompute_all_stats()");
 
-    expect([await statsOf(alice), await statsOf(bob)].map(({ updated_at, ...rest }) => rest)).toEqual(
-      before.map(({ updated_at, ...rest }) => rest),
-    );
+    const withoutTimestamp = (row: Record<string, unknown>) => ({ ...row, updated_at: undefined });
+    expect([await statsOf(alice), await statsOf(bob)].map(withoutTimestamp)).toEqual(before.map(withoutTimestamp));
     expect((await db.admin.query("select count(*)::int as n from public.college_matches")).rows[0].n).toBe(1);
     expect(before[0]).toMatchObject({ games_played: 1, draws: 1, points: 1 });
   });
