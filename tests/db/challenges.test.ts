@@ -74,7 +74,7 @@ describe("creating challenges", () => {
 
     const note = await db.as(bob.id).query("select type, title, data from public.notifications where type = 'challenge_received'");
     expect(note.rows.at(-1)).toMatchObject({ type: "challenge_received" });
-    expect(note.rows.at(-1).data.challenge_id).toBe(c.id);
+    expect(note.rows.at(-1)?.data.challenge_id).toBe(c.id);
     const events = await db.as(alice.id).query("select to_status, actor_id from public.challenge_events where challenge_id = $1", [c.id]);
     expect(events.rows).toEqual([{ to_status: "pending", actor_id: alice.id }]);
   });

@@ -529,7 +529,7 @@ $$;
 create function public.confirm_chess_link(
   p_claim_id uuid,
   p_observed_username text,
-  p_observed_player_id bigint,
+  p_observed_player_id bigint default null,
   p_method public.verification_method default 'profile_code'
 ) returns jsonb
 language plpgsql security definer set search_path = '' as $$
@@ -803,7 +803,7 @@ $$;
 
 -- Manual verification of a Chess.com claim. `p_player_id` is whatever the server observed
 -- from the public API when the reviewer opened the claim (may be null if unavailable).
-create function public.admin_review_claim(p_claim_id uuid, p_approve boolean, p_player_id bigint, p_reason text)
+create function public.admin_review_claim(p_claim_id uuid, p_approve boolean, p_reason text, p_player_id bigint default null)
 returns jsonb
 language plpgsql security definer set search_path = '' as $$
 declare

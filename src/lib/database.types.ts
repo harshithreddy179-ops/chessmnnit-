@@ -1014,7 +1014,7 @@ export type Database = {
         Returns: undefined
       }
       admin_review_claim: {
-        Args: { p_claim_id: string; p_approve: boolean; p_player_id: number; p_reason: string }
+        Args: { p_claim_id: string; p_approve: boolean; p_reason: string; p_player_id?: number }
         Returns: Json
       }
       admin_review_eligibility_request: {
@@ -1070,7 +1070,7 @@ export type Database = {
         Returns: string
       }
       confirm_chess_link: {
-        Args: { p_claim_id: string; p_observed_username: string; p_observed_player_id: number; p_method?: Database["public"]["Enums"]["verification_method"] }
+        Args: { p_claim_id: string; p_observed_username: string; p_observed_player_id?: number; p_method?: Database["public"]["Enums"]["verification_method"] }
         Returns: Json
       }
       consume_rate_limit: {

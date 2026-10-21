@@ -161,7 +161,7 @@ describe("administrator role matrix (enforced in the database)", () => {
     ["void challenge", `select public.admin_void_challenge('${randomUUID()}', 'testing role matrix')`, ["super", "moderator"]],
     ["correct match", `select public.admin_correct_match('${randomUUID()}', 'draw', 'testing role matrix')`, ["super", "moderator"]],
     ["resolve dispute", `select public.admin_resolve_dispute('${randomUUID()}', 'resolved', 'testing role matrix')`, ["super", "moderator"]],
-    ["review claim", `select public.admin_review_claim('${randomUUID()}', false, null, 'testing role matrix')`, ["super", "verifier"]],
+    ["review claim", `select public.admin_review_claim('${randomUUID()}', false, 'testing role matrix')`, ["super", "verifier"]],
     ["retry player sync", `select public.admin_retry_player_sync('${randomUUID()}')`, ["super", "verifier", "moderator"]],
     ["overview", `select public.admin_overview()`, ["super", "verifier", "moderator", "analyst"]],
   ];

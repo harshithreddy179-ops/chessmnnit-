@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import type { QueryResultRow } from "pg";
 import { createTestDb, sqlError, type Player, type TestDb } from "./helpers";
 
 let db: TestDb;
@@ -39,7 +40,7 @@ afterAll(async () => {
 
 const board = async (name: string, cls = "rapid", limit = 50, offset = 0) =>
   (await db.anon.query("select * from public.get_leaderboard($1, $2, $3, $4)", [name, cls, limit, offset])).rows;
-const names = (rows: { chess_username: string }[]) => rows.map((r) => r.chess_username);
+const names = (rows: QueryResultRow[]): string[] => rows.map((r) => r.chess_username as string);
 
 describe("leaderboards", () => {
   it("ranks the official Chess.com rating per category and never merges categories", async () => {
@@ -87,7 +88,7 @@ describe("leaderboards", () => {
     const rows = await board("elo");
     const elos = rows.map((r) => Number(r.elo));
     expect([...elos].sort((x, y) => y - x)).toEqual(elos);
-    expect(rows.at(-1).chess_username).toBe("lb_e"); // lost nine games
+    expect(rows.at(-1)?.chess_username).toBe("lb_e"); // lost nine games
   });
 
   it("ranks recent activity from the last 30 days only", async () => {

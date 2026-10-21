@@ -350,7 +350,7 @@ describe("admin-reviewed fallback and account recovery", () => {
     const review = await db.as(u.id).query("select * from public.submit_claim_for_review('I met the admins at the chess club room and can show the account')");
     expect(review.rows[0].status).toBe("needs_review");
 
-    const res = await db.as(admin.id).query("select public.admin_review_claim($1, true, 555, 'Verified in person at the club room') as r", [review.rows[0].id]);
+    const res = await db.as(admin.id).query("select public.admin_review_claim($1, true, 'Verified in person at the club room', 555) as r", [review.rows[0].id]);
     expect(res.rows[0].r.ok).toBe(true);
     const link = (await db.admin.query("select verification_method, chess_player_id from public.chess_account_links where user_id = $1", [u.id])).rows[0];
     expect(link).toMatchObject({ verification_method: "admin_review" });

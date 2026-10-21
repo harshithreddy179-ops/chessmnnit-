@@ -322,7 +322,7 @@ grant execute on function
   public.admin_remove_eligibility(uuid, text),
   public.admin_set_user_eligibility(uuid, public.eligibility_status, text),
   public.admin_review_eligibility_request(uuid, boolean, text),
-  public.admin_review_claim(uuid, boolean, bigint, text),
+  public.admin_review_claim(uuid, boolean, text, bigint),
   public.admin_set_account_status(uuid, boolean, text),
   public.admin_set_role(uuid, public.app_role, boolean, text),
   public.admin_resolve_challenge_with_game(uuid, text, text),

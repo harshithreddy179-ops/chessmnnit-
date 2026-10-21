@@ -86,7 +86,7 @@ insert into public.app_settings (key, value, description, is_public) values
   ('challenge_expiry_hours',   '48'::jsonb,    'Hours before an unanswered pending challenge expires.', true),
   ('challenge_max_pending_outgoing', '5'::jsonb, 'Maximum simultaneously pending challenges a player may have sent.', true),
   ('challenge_rate_per_hour',  '10'::jsonb,    'Maximum challenges a player may create per hour.', false),
-  ('match_settle_minutes',     '20'::jsonb,    'After a single candidate game is found, wait this long and re-check for competing games before verifying.', true),
+  ('match_settle_minutes',     '60'::jsonb,    'After a single candidate game is found, wait this long and re-check for competing games before verifying. Chess.com archives can lag, so keep this generous.', true),
   ('match_max_wait_hours',     '72'::jsonb,    'Hours after acceptance before an unresolved challenge moves to manual review.', true),
   ('min_games_for_win_rate',   '5'::jsonb,     'Minimum verified college matches before a player appears on the win-rate leaderboard.', true),
   ('points_per_win',           '3'::jsonb,     'College match points awarded for a win.', true),

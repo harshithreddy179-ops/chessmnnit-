@@ -564,11 +564,19 @@ begin
 end;
 $$;
 
--- Automatic path: called by the worker only after it has weighed the evidence.
+-- Automatic path: called by the worker only after it has weighed the evidence. The attempt
+-- record is written in the same transaction as the match, so the timeline is always complete.
 create function public.finalize_challenge_match(p_challenge_id uuid, p_game_id uuid, p_evidence jsonb default '{}'::jsonb)
 returns uuid
-language sql security definer set search_path = '' as $$
-  select app_private.finalize_match(p_challenge_id, p_game_id, 'automatic', null, p_evidence, false)
+language plpgsql security definer set search_path = '' as $$
+declare v_match uuid;
+begin
+  v_match := app_private.finalize_match(p_challenge_id, p_game_id, 'automatic', null, p_evidence, false);
+  insert into public.match_sync_attempts (challenge_id, outcome, candidates, detail)
+  values (p_challenge_id, 'verified', 1, jsonb_build_object('game_id', p_game_id, 'match_id', v_match));
+  update public.challenges set check_count = check_count + 1, last_checked_at = now() where id = p_challenge_id;
+  return v_match;
+end;
 $$;
 
 -- Moderator path: pick the correct imported game for an ambiguous / stuck challenge.
