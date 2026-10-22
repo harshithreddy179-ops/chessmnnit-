@@ -4,9 +4,9 @@ Three layers, from fast to realistic, plus a list of what they **do not** prove.
 
 | Layer                            | Command             | Needs                  | What it exercises                                                                                                                                                                                                                                                              |
 | -------------------------------- | ------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| Unit (6 files)                   | `npm run test:unit` | nothing                | Chess.com client (timeouts, backoff, `Retry-After`, ETag, redirects), game normalisation, the matcher's decisions, verification providers, presence aggregation, input schemas                                                                                                 |
-| Database + integration (8 files) | `npm run test:db`   | a local PostgreSQL 14+ | The real migrations on a real Postgres; row-level security as each role; one-to-one ownership; challenge state machine; matching and statistics against an independent reference model; leaderboards; admin roles and audit; the sync job against a fake Chess.com HTTP server |
-| Browser end-to-end (31 tests)    | `npm run test:e2e`  | PostgreSQL + Chromium  | The built Next.js app in a browser: public pages with real rows, sign-in protection, onboarding, challenges through to an automatically verified result, administration, settings and account deletion                                                                         |
+| Unit (5 files)                   | `npm run test:unit` | nothing                | Chess.com client (timeouts, backoff, `Retry-After`, ETag, redirects), game normalisation, the matcher's decisions, presence aggregation, input schemas                                                                                                                         |
+| Database + integration (9 files) | `npm run test:db`   | a local PostgreSQL 14+ | The real migrations on a real Postgres; row-level security as each role; one-to-one ownership; challenge state machine; matching and statistics against an independent reference model; leaderboards; admin roles and audit; the sync job against a fake Chess.com HTTP server |
+| Browser end-to-end (34 tests)    | `npm run test:e2e`  | PostgreSQL + Chromium  | The built Next.js app in a browser: public pages with real rows, sign-in protection, onboarding, challenges through to an automatically verified result, administration, settings and account deletion                                                                         |
 
 `npm test` runs unit + database together. `npm run check` runs typecheck, lint, all of those and the build.
 
@@ -46,10 +46,14 @@ Supabase does.
   window; ambiguity → review; a second game appearing during the window; delayed archives; games that cannot belong to
   the challenge; unreadable results; partial archive failure; a long `Retry-After`; transient failures with backoff;
   conditional requests; strictly serial requests; expiry in the same run.
-- **Verification and rating sync** (`verification-flow.test.ts`): the profile-code round trip against the fake (linked
-  only once the code is really visible; a claim on someone else's username cannot be hijacked; closed, renamed and
-  unreachable accounts are not verified; the administrator-review fallback), plus stats mapping, due-player refresh one
-  at a time, and failure/identity-change recording that never touches the verified link.
+- **Open registration and Chess.com links** (`open-registration.test.ts`): accounts start eligible; linking a username
+  (validation, case/padding, one-to-one, no self-service change, suspended and signed-out callers, rate limit);
+  the student-list setting still gates accounts created while it is on; the administrator "set link" action (typo fix,
+  taking a username back from whoever claimed it first, archived history, audit, notifications, role and reason
+  checks, no-op and bad input).
+- **Identity** (`identity.test.ts`): the older student-list and ownership-claim machinery, exercised with the setting on.
+- **Rating sync** (`player-sync.test.ts`): stats mapping, due-player refresh one at a time, and failure/identity-change
+  recording that never touches the link.
 - **Admin** (`sync-admin.test.ts`): every admin function by role, reasons required, audit entries written, bootstrap
   function privileges.
 

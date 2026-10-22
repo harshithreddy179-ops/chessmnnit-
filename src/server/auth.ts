@@ -9,7 +9,6 @@ export type AppRole = Database["public"]["Enums"]["app_role"];
 export type Profile = Database["public"]["Tables"]["profiles"]["Row"];
 export type ProfileSettings = Database["public"]["Tables"]["profile_settings"]["Row"];
 export type ChessLink = Database["public"]["Tables"]["chess_account_links"]["Row"];
-export type ChessClaim = Database["public"]["Tables"]["chess_link_claims"]["Row"];
 
 export interface SessionUser {
   id: string;
@@ -34,7 +33,6 @@ export interface AppContext {
   profile: Profile;
   settings: ProfileSettings | null;
   link: ChessLink | null;
-  claim: ChessClaim | null;
   roles: AppRole[];
 }
 
@@ -45,16 +43,10 @@ export const getAppContext = cache(async (): Promise<AppContext | null> => {
   const user = await getSessionUser();
   if (!user) return null;
 
-  const [profile, settings, link, claim, roles] = await Promise.all([
+  const [profile, settings, link, roles] = await Promise.all([
     supabase.from("profiles").select("*").eq("id", user.id).maybeSingle(),
     supabase.from("profile_settings").select("*").eq("user_id", user.id).maybeSingle(),
     supabase.from("chess_account_links").select("*").eq("user_id", user.id).maybeSingle(),
-    supabase
-      .from("chess_link_claims")
-      .select("*")
-      .eq("user_id", user.id)
-      .in("status", ["pending", "needs_review"])
-      .maybeSingle(),
     supabase.from("admin_roles").select("role").eq("user_id", user.id),
   ]);
   if (!profile.data) return null;
@@ -64,7 +56,6 @@ export const getAppContext = cache(async (): Promise<AppContext | null> => {
     profile: profile.data,
     settings: settings.data,
     link: link.data,
-    claim: claim.data,
     roles: (roles.data ?? []).map((r) => r.role),
   };
 });

@@ -1024,6 +1024,10 @@ export type Database = {
         Args: { p_user: string; p_suspend: boolean; p_reason: string }
         Returns: undefined
       }
+      admin_set_chess_link: {
+        Args: { p_user: string; p_username: string; p_reason: string; p_player_id?: number }
+        Returns: Json
+      }
       admin_set_role: {
         Args: { p_user: string; p_role: Database["public"]["Enums"]["app_role"]; p_grant: boolean; p_reason: string }
         Returns: undefined
@@ -1112,6 +1116,10 @@ export type Database = {
         Args: { p_username: string }
         Returns: boolean
       }
+      link_my_chess_account: {
+        Args: { p_username: string }
+        Returns: Json
+      }
       normalize_chess_username: {
         Args: { p_username: string }
         Returns: string
@@ -1175,7 +1183,7 @@ export type Database = {
       recovery_kind: "change_username" | "transfer_username"
       request_status: "open" | "approved" | "rejected"
       time_class: "bullet" | "blitz" | "rapid" | "daily"
-      verification_method: "profile_code" | "oauth" | "admin_review"
+      verification_method: "profile_code" | "oauth" | "admin_review" | "self_declared"
     }
     CompositeTypes: { [_ in never]: never }
   }
@@ -1197,7 +1205,7 @@ export const Constants = {
     recovery_kind: ["change_username", "transfer_username"],
     request_status: ["open", "approved", "rejected"],
     time_class: ["bullet", "blitz", "rapid", "daily"],
-    verification_method: ["profile_code", "oauth", "admin_review"],
+    verification_method: ["profile_code", "oauth", "admin_review", "self_declared"],
     },
   },
 } as const

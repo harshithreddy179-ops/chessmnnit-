@@ -33,16 +33,16 @@ export default async function RulesPage() {
           <h2>Who appears</h2>
           <ul>
             <li>
-              Only students whose Google email matched the club’s approved student list (or who were
-              approved by an administrator).
+              Members who have signed in with Google, added their Chess.com username and finished
+              onboarding.
             </li>
             <li>
-              Only accounts whose Chess.com ownership was verified. A Chess.com username belongs to{" "}
-              <strong>one</strong> member and a member has <strong>one</strong> Chess.com account.
+              A Chess.com username belongs to <strong>one</strong> member and a member has{" "}
+              <strong>one</strong> Chess.com account. Members type their own username; the club does
+              not prove who owns a Chess.com account, and administrators can correct a wrong link.
             </li>
             <li>
-              Suspended players, unverified players and players who have not finished onboarding are
-              hidden everywhere.
+              Suspended players and players who have not finished onboarding are hidden everywhere.
             </li>
           </ul>
         </section>

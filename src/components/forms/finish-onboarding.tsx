@@ -16,16 +16,11 @@ export function FinishOnboarding({
   const { run, busy, error } = useAction();
   return (
     <div className="grid gap-3">
-      {!canFinish ? (
-        <Alert variant="info">
-          Start the Chess.com step above first (you don’t have to finish verifying to complete
-          registration).
-        </Alert>
-      ) : null}
+      {!canFinish ? <Alert variant="info">Add your Chess.com username above first.</Alert> : null}
       {canFinish && !approved ? (
-        <Alert variant="warning" title="You’ll be listed once verification is complete">
+        <Alert variant="warning" title="You’ll be listed once you’re eligible">
           You can finish registration now. You appear on leaderboards and can play ranked college
-          matches once your student eligibility and Chess.com ownership are both verified.
+          matches once your student eligibility is confirmed.
         </Alert>
       ) : null}
       {error ? <Alert variant="danger">{error.message}</Alert> : null}

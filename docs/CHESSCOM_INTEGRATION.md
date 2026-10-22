@@ -8,23 +8,23 @@ application's logic; only a run from a machine with internet access proves the a
 
 ## Status at a glance
 
-| Capability                                                        | Status                                                                                                                                   |
-| ----------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| Public profile, stats, monthly game archives (Published-Data API) | **Implemented**, tested against a documentation-modelled stand-in. **Not yet confirmed live.**                                           |
-| Ownership proof by profile code (Location / Name field)           | **Implemented**, tested against the stand-in. Works only if Chess.com's public API returns the edited field; **confirm with the probe.** |
-| Ownership proof by administrator review                           | **Implemented and fully tested** (needs no Chess.com access). This is the fallback and is always available.                              |
-| Chess.com OAuth ("Sign in with Chess.com")                        | **Not implemented.** Requires Chess.com to approve an application and issue credentials. See below.                                      |
-| Creating or accepting games on Chess.com                          | **Impossible by design.** Chess.com offers no public API for it. The app says so and students play on Chess.com themselves.              |
+| Capability                                                        | Status                                                                                                                                 |
+| ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Public profile, stats, monthly game archives (Published-Data API) | **Implemented**, tested against a documentation-modelled stand-in. **Not yet confirmed live.**                                         |
+| Linking an account by typing its username                         | **Implemented and tested.** The app checks the account exists (when Chess.com can be reached). **No proof of ownership.**              |
+| Administrator change of a link                                    | **Implemented and fully tested** (needs no Chess.com access): replaces a link, takes a username back from whoever claimed it first.    |
+| Proof of ownership (profile code, Chess.com OAuth)                | **Removed / not implemented.** The earlier profile-code check was dropped from the product on purpose; OAuth needs Chess.com approval. |
+| Creating or accepting games on Chess.com                          | **Impossible by design.** Chess.com offers no public API for it. The app says so and students play on Chess.com themselves.            |
 
 ## Endpoints used (read-only, public, unauthenticated)
 
 All via `src/lib/chess/client.ts`, base `https://api.chess.com/pub`:
 
-| Endpoint                                   | Used for                                                                       |
-| ------------------------------------------ | ------------------------------------------------------------------------------ |
-| `GET /player/{username}`                   | existence, `player_id`, `status`, `location` / `name` (ownership code), avatar |
-| `GET /player/{username}/stats`             | ratings and win/loss/draw records per category (bullet, blitz, rapid, daily)   |
-| `GET /player/{username}/games/{YYYY}/{MM}` | the monthly archive, to find the finished game of an accepted challenge        |
+| Endpoint                                   | Used for                                                                     |
+| ------------------------------------------ | ---------------------------------------------------------------------------- |
+| `GET /player/{username}`                   | existence, `player_id`, `status`, avatar                                     |
+| `GET /player/{username}/stats`             | ratings and win/loss/draw records per category (bullet, blitz, rapid, daily) |
+| `GET /player/{username}/games/{YYYY}/{MM}` | the monthly archive, to find the finished game of an accepted challenge      |
 
 No other endpoint is called, and no endpoint is invented. Usernames are validated (`3–25` letters, digits,
 underscore, hyphen) and lower-cased before they are placed in a URL path, so a value can never escape its path slot.
@@ -46,59 +46,45 @@ underscore, hyphen) and lower-cased before they are placed in a URL path, so a v
 - **Failures are never results.** A timeout, `429`, partial archive or schema mismatch can only delay a check. It can
   never verify or reject anything.
 
-## Proving a Chess.com account belongs to a member
+## Linking a Chess.com account
 
-Goals: only the real owner can link an account, an account can belong to **one** member, and the system never claims
-more than it checked. Two routes, shown honestly to the student:
+Players type their Chess.com username (or paste a profile link) and are linked immediately. **Nothing proves the
+account is theirs**, and the app says so: the link is stored with method `self_declared`, public profiles describe it
+as "entered by the member and not independently verified", and only match results are called verified.
 
-### 1. Profile code (automatic)
+What the app does check:
 
-1. The member enters a username (or pastes a profile link).
-2. The **database** generates a one-time code (`MNNIT-` + 8 unambiguous characters). The client cannot choose it, so it
-   cannot point at text already on someone else's profile.
-3. The member puts the code in the **Location** field of their own Chess.com profile (Name is also checked) and presses
-   **Check my profile**.
-4. The server reads the public profile through the API and looks for the code. Only the account owner can edit that
-   field, so seeing the code proves control. Nothing else (no password, cookie or token) is ever requested.
-5. Only then does a trusted server call link the account — through a database function that holds the one-to-one
-   constraints.
+- the username has a valid shape (3–25 letters, digits, `_`, `-`);
+- the account exists and is not closed — a definite "not found" from Chess.com rejects a typo. If Chess.com cannot be
+  reached the link is still made (an outage must not stop sign-ups) and the player is told it was not checked;
+- the username is not already linked to another member, and the member has no other link (see below).
 
-Caveat: **Chess.com serves published data through a cache**, so an edit can take a while to appear. "Code not found"
-therefore means "not visible yet" and the UI says so; the member can retry later or switch to review. If the live
-probe shows the field never appears, set `CHESSCOM_PROFILE_CODE_VERIFICATION=false` and only review is offered.
+After linking, the first rating import runs straight away (best effort; the scheduled job retries on failure) and
+records Chess.com's `player_id`, which is how a later rename is detected.
 
-### 2. Administrator review (always available)
+### When it goes wrong: administrators change the link
 
-The member explains how an administrator can confirm the account (for example, showing it at the club). A
-verification admin decides, with a written reason. The link is recorded with method `admin_review`, an audit entry is
-written and the member is notified. It is never silent: a claim waiting for review is visibly not verified.
+**Admin → Users → (player) → Change Chess.com account** handles every case in one audited action: a typo, a renamed
+account, or someone who linked a username before its real owner. The player's old link is archived, the new one is
+created (method `admin_review`), and if another member currently holds the username they are unlinked and notified.
+Players can also send a recovery request from **Settings**; approving it removes the wrong link and the player adds the
+right username themselves. Players cannot edit a link on their own, because match results are credited to it.
+
+Residual risk, stated plainly: since ownership is not proven, a person can link someone else's username first. Their
+games on Chess.com would be credited to the wrong member until an administrator notices. If that matters for your
+club, either keep an eye on the new-members list or turn on `require_student_eligibility` so only listed students can
+join.
 
 ### One-to-one guarantee
 
 Enforced by the database, not by application code:
 
 - `UNIQUE` on the member (one account per member), on the Chess.com username and on the Chess.com player id (one
-  member per account — and a renamed account cannot be claimed twice);
-- **claims are not links**: starting a claim reserves nothing, so nobody can squat a username they do not control;
+  member per account — and a renamed account cannot be linked twice);
 - the link function runs in one transaction; when two requests race, one wins and the other gets a clear
-  "already linked" result, and the rejected attempt is audited;
-- the link's identity fields are immutable to the member; changing or removing a link is an administrator action
-  (recovery requests: a member who lost access to their account asks, and an admin decides, with audit and
-  notification of both parties).
-
-### Chess.com OAuth — pending Chess.com approval
-
-Chess.com's OAuth/"Sign in with Chess.com" is available only to applications Chess.com approves and issues client
-credentials to. This project does **not** guess OAuth endpoints, scopes or token formats. What exists:
-
-- the verification layer is a provider interface (`src/lib/chess/verification/`) with `profile_code` and
-  `admin_review` implemented and an `oauth` provider that reports `awaiting_approval`;
-- `CHESSCOM_OAUTH_CLIENT_ID` / `CHESSCOM_OAUTH_CLIENT_SECRET` are read only to report "credentials present, adapter
-  missing" in **Admin → Sync & jobs**.
-
-To finish it: apply to Chess.com for API/OAuth access, then implement the provider against the endpoints and scopes
-they document for your app, behind the existing interface. Everything that consumes a verified link (one-to-one
-rules, audit, notifications) already works with any method.
+  "already linked" result;
+- the link's identity fields are immutable to the member; changing or removing a link is an administrator action,
+  with audit and notification of the people involved.
 
 ## Rating sync
 

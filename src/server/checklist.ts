@@ -3,10 +3,10 @@ import "server-only";
 import type { ChecklistItem } from "@/components/forms/status-checklist";
 import type { AppContext } from "@/server/auth";
 
-/** The four independent verification facts for the signed-in user. */
+/** What is true about the signed-in user's account, in the order they usually happen. */
 export function buildChecklist(ctx: AppContext): ChecklistItem[] {
-  const { profile, link, claim } = ctx;
-  return [
+  const { profile, link } = ctx;
+  const items: ChecklistItem[] = [
     {
       label: "Google account signed in",
       state: "done",
@@ -14,7 +14,10 @@ export function buildChecklist(ctx: AppContext): ChecklistItem[] {
         ? `Signed in as ${ctx.user.email}. Never shown publicly.`
         : "You are signed in.",
     },
-    {
+  ];
+  // Accounts created while registration is open are eligible from the start, so there is nothing to show.
+  if (profile.eligibility_source !== "open_registration") {
+    items.push({
       label: "College eligibility verified",
       state: profile.eligibility_status === "verified" ? "done" : "todo",
       detail:
@@ -23,22 +26,21 @@ export function buildChecklist(ctx: AppContext): ChecklistItem[] {
           : profile.eligibility_status === "revoked"
             ? "Eligibility was withdrawn by an administrator."
             : "Your account isn’t on the approved student list yet. Request a review.",
-    },
+    });
+  }
+  items.push(
     {
-      label: "Chess.com ownership verified",
-      state: link ? "done" : claim ? "pending" : "todo",
+      label: "Chess.com account linked",
+      state: link ? "done" : "todo",
       detail: link
         ? `Linked to @${link.chess_username}.`
-        : claim?.status === "needs_review"
-          ? `@${claim.chess_username}: waiting for an administrator.`
-          : claim
-            ? `@${claim.chess_username}: add your code to your profile and check.`
-            : "Enter your Chess.com username and prove you own it.",
+        : "Enter your Chess.com username so your games and ratings can be found.",
     },
     {
       label: "Profile complete",
       state: profile.onboarding_completed_at ? "done" : "todo",
       detail: profile.onboarding_completed_at ? "Onboarding finished." : "Finish onboarding.",
     },
-  ];
+  );
+  return items;
 }

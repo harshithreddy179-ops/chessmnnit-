@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { ChessVerification, type ClaimView } from "@/components/forms/chess-verification";
+import { ChessLinkForm } from "@/components/forms/chess-link-form";
 import { ExternalChessLink } from "@/components/data/leaderboard-table";
 import { DeleteAccount } from "@/components/forms/delete-account";
 import { EligibilityPanel } from "@/components/forms/eligibility-panel";
@@ -12,8 +12,6 @@ import { PageHeader } from "@/components/data/primitives";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { describeProviders } from "@/lib/chess/verification/providers";
-import { getChessComConfig, getChessComOAuthCredentials } from "@/lib/env.server";
 import { formatDate } from "@/lib/utils";
 import { requireOnboarded } from "@/server/auth";
 import { buildChecklist } from "@/server/checklist";
@@ -36,31 +34,18 @@ export default async function SettingsPage() {
       .eq("status", "open")
       .maybeSingle(),
   ]);
-  const providers = describeProviders({
-    profileCodeEnabled: getChessComConfig().profileCodeVerification,
-    oauthCredentialsPresent: getChessComOAuthCredentials() !== null,
-  });
-  const claim: ClaimView | null = ctx.claim
-    ? {
-        status: ctx.claim.status as ClaimView["status"],
-        chess_username: ctx.claim.chess_username,
-        verification_code: ctx.claim.verification_code,
-        code_expires_at: ctx.claim.code_expires_at,
-        attempts: ctx.claim.attempts,
-        last_checked_at: ctx.claim.last_checked_at,
-        last_check_result: ctx.claim.last_check_result,
-        method: ctx.claim.method,
-      }
-    : null;
   const eligible = ctx.profile.eligibility_status === "verified";
 
   return (
     <div className="grid gap-10">
-      <PageHeader title="Settings" description="Your verification, profile, privacy and account." />
+      <PageHeader
+        title="Settings"
+        description="Your account, profile, privacy and Chess.com link."
+      />
 
-      <section className="grid gap-4" aria-labelledby="verification">
-        <h2 id="verification" className="text-lg font-semibold">
-          Verification
+      <section className="grid gap-4" aria-labelledby="account-status">
+        <h2 id="account-status" className="text-lg font-semibold">
+          Account status
         </h2>
         <StatusChecklist items={buildChecklist(ctx)} />
         {ctx.profile.account_status === "suspended" ? (
@@ -90,7 +75,8 @@ export default async function SettingsPage() {
         <CardHeader>
           <CardTitle>Chess.com account</CardTitle>
           <CardDescription>
-            Your verified identity can’t be edited. That protects everyone’s results.
+            Your link can’t be edited here, because match results are credited to it. If it’s wrong,
+            ask the administrators.
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-5">
@@ -98,26 +84,32 @@ export default async function SettingsPage() {
             <>
               <div className="flex flex-wrap items-center gap-3">
                 <ExternalChessLink username={ctx.link.chess_username} />
-                <Badge variant="success">Verified {formatDate(ctx.link.verified_at)}</Badge>
+                <Badge variant="neutral">Linked {formatDate(ctx.link.verified_at)}</Badge>
                 <Badge variant="neutral">
-                  {ctx.link.verification_method === "admin_review"
-                    ? "Confirmed by an administrator"
-                    : ctx.link.verification_method === "profile_code"
-                      ? "Confirmed by profile code"
-                      : "Confirmed via OAuth"}
+                  {ctx.link.verification_method === "self_declared"
+                    ? "Entered by you"
+                    : ctx.link.verification_method === "admin_review"
+                      ? "Set by an administrator"
+                      : ctx.link.verification_method === "profile_code"
+                        ? "Confirmed by profile code"
+                        : "Confirmed via OAuth"}
                 </Badge>
               </div>
               <details className="rounded-lg border p-4">
                 <summary className="cursor-pointer text-sm font-medium">
-                  I need to change or recover my Chess.com link
+                  My Chess.com link is wrong
                 </summary>
                 <div className="pt-4">
                   <RecoveryForm hasOpen={Boolean(openRecovery)} />
                 </div>
               </details>
             </>
+          ) : eligible ? (
+            <ChessLinkForm />
           ) : (
-            <ChessVerification claim={claim} eligible={eligible} providers={providers} />
+            <Alert variant="info" title="Confirm you’re a student first">
+              You can add your Chess.com username once your college eligibility is confirmed.
+            </Alert>
           )}
         </CardContent>
       </Card>

@@ -30,7 +30,9 @@ export interface TestDb {
     confirmed?: boolean;
   }): Promise<{ id: string; email: string }>;
   allowEmail(email: string): Promise<void>;
-  /** Drives the real flow: allowlist -> eligibility -> claim -> verification -> onboarding. */
+  /** Turns the `require_student_eligibility` setting on or off (affects accounts created afterwards). */
+  requireEligibility(on: boolean): Promise<void>;
+  /** Drives the real flow: sign-up -> link the Chess.com username -> onboarding. */
   onboard(opts?: {
     username?: string;
     name?: string;
@@ -138,23 +140,33 @@ export function bindTestDb(name: string, dropOnClose: boolean): TestDb {
       );
     },
 
+    async requireEligibility(on) {
+      await admin.query(
+        "update public.app_settings set value = to_jsonb($1::boolean) where key = 'require_student_eligibility'",
+        [on],
+      );
+    },
+
     async onboard(opts = {}) {
       const user = await db.createUser({ email: opts.email, name: opts.name ?? "Test Player" });
       const username = opts.username ?? `p${randomBytes(4).toString("hex")}`;
       const playerId = opts.playerId ?? Math.floor(Math.random() * 1_000_000_000);
-      await db.allowEmail(user.email);
       const me = db.as(user.id);
+      // Only does anything when a test has switched the student-list requirement on.
+      await db.allowEmail(user.email);
       await me.query("select public.claim_eligibility()");
-      const claim = await me.query<{ id: string }>("select * from public.start_chess_claim($1)", [
-        username,
-      ]);
-      const res = await db.service.query<{ confirm_chess_link: { ok: boolean; reason?: string } }>(
-        "select public.confirm_chess_link($1, $2, $3, 'profile_code')",
-        [claim.rows[0]!.id, username, playerId],
+      const linked = await me.query<{ link_my_chess_account: { ok: boolean; reason?: string } }>(
+        "select public.link_my_chess_account($1)",
+        [username],
       );
-      if (!res.rows[0]!.confirm_chess_link.ok) {
-        throw new Error(`verification failed: ${JSON.stringify(res.rows[0])}`);
+      if (!linked.rows[0]!.link_my_chess_account.ok) {
+        throw new Error(`linking failed: ${JSON.stringify(linked.rows[0])}`);
       }
+      // What the first player sync does: learn Chess.com's own id for the account.
+      await admin.query(
+        "update public.chess_account_links set chess_player_id = $1 where user_id = $2",
+        [playerId, user.id],
+      );
       await me.query("update public.profiles set display_name = $1 where id = $2", [
         opts.name ?? "Test Player",
         user.id,

@@ -44,8 +44,8 @@ Tables in `public` (all with RLS enabled; internal helpers live in `app_private`
 - **Identity**: `profiles` (1:1 with `auth.users`; display fields, eligibility status, onboarding state, `is_approved`
   derived), `profile_settings` (presence preference), `student_eligibility` (allowlist of emails / domains),
   `eligibility_requests`, `admin_roles`.
-- **Chess.com ownership**: `chess_link_claims` (attempts; server-generated code; not an identity), `chess_account_links`
-  (the verified one-to-one link), `chess_link_history` (archived links), `account_recovery_requests`.
+- **Chess.com link**: `chess_account_links` (the one-to-one link; method `self_declared`, `admin_review`, or the
+  older `profile_code` / `oauth`), `chess_link_claims` (the older proof-of-ownership attempts, kept so existing claims stay reviewable; no longer started by the app), `chess_link_history` (archived links), `account_recovery_requests`.
 - **Chess.com data**: `chess_ratings`, `chess_rating_history`, `chess_sync_state`, `chess_archive_state` (ETags),
   `imported_chess_games`.
 - **Play**: `supported_time_controls`, `challenges`, `challenge_events` (timeline), `match_sync_attempts` (every automatic
@@ -85,8 +85,11 @@ Accepting does **not** create a Chess.com game. Result detection rules are in
   `SECURITY DEFINER`, `search_path = ''`, an explicit role check and an audit write. Which functions each database role
   may execute is asserted by a test. Admin roles are read from `admin_roles`, never from the request or the JWT
   (a forged claim is ignored — tested).
-- **Four statuses are kept apart**: Google-authenticated, college eligibility verified, Chess.com ownership verified,
-  profile complete. A player is public (`is_approved`) only when all hold; the onboarding checklist shows each one.
+- **Statuses are kept apart**: Google-authenticated, eligible, Chess.com account linked, profile complete. A player is
+  public (`is_approved`) only when all hold; the onboarding checklist shows each one. Eligibility is set automatically
+  at sign-up (`open_registration`) unless the `require_student_eligibility` setting is on, in which case the student
+  list applies to accounts created afterwards. A Chess.com link is the player's own entry and is never described as
+  verified; only match results are.
 - **Secrets**: the Supabase secret key and `CRON_SECRET` are server-only (`server-only` import guard); only three
   `NEXT_PUBLIC_*` values reach the browser. `/api/cron/*` compares a SHA-256 digest of the bearer token in constant
   time and stays closed (503) when no sufficiently long secret is configured.

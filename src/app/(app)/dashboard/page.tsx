@@ -47,14 +47,14 @@ export default async function DashboardPage() {
       {!ctx.profile.is_approved ? (
         <section className="grid gap-4">
           <Alert variant="warning" title="You’re not on the leaderboards yet">
-            All four checks below must be complete before you can play ranked college matches or
-            appear in the player list.
+            Finish the steps below before you can play ranked college matches or appear in the
+            player list.
           </Alert>
           <StatusChecklist items={checklist} />
           <div>
             <Button asChild variant="outline">
               <Link href="/settings">
-                Finish verification <ArrowRight aria-hidden />
+                Finish setting up <ArrowRight aria-hidden />
               </Link>
             </Button>
           </div>

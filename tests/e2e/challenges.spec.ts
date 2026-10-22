@@ -326,7 +326,7 @@ test.describe("challenges", () => {
     await expect(danaPage.getByText("Declined").first()).toBeVisible();
   });
 
-  test("a player who has not finished verification cannot challenge anyone", async ({
+  test("a player who has not finished setting up cannot challenge anyone", async ({
     db,
     player,
     pageAs,
@@ -336,9 +336,7 @@ test.describe("challenges", () => {
     const newcomer = await db.createUser({ name: "Nobody Yet" });
     const page = await pageAs(newcomer);
     await page.goto("/players/target_e2e");
-    await expect(
-      page.getByRole("link", { name: /Finish verification to challenge/ }),
-    ).toBeVisible();
+    await expect(page.getByRole("link", { name: /Finish setting up to challenge/ })).toBeVisible();
     // The API refuses too, regardless of the UI.
     const refused = await page.evaluate(
       async (recipient) => {

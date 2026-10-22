@@ -33,14 +33,15 @@ export function RatingBadge({
   );
 }
 
-export function VerifiedChessBadge({ verified }: { verified: boolean }) {
-  return verified ? (
+/** Whether a Chess.com username is linked. Links are entered by the player, so this never says "verified". */
+export function ChessLinkBadge({ linked }: { linked: boolean }) {
+  return linked ? (
     <Badge variant="success">
-      <BadgeCheck aria-hidden /> Chess.com verified
+      <BadgeCheck aria-hidden /> Chess.com linked
     </Badge>
   ) : (
     <Badge variant="warning">
-      <CircleDashed aria-hidden /> Chess.com not verified
+      <CircleDashed aria-hidden /> No Chess.com link
     </Badge>
   );
 }
@@ -48,7 +49,7 @@ export function VerifiedChessBadge({ verified }: { verified: boolean }) {
 export function CollegeBadge({ verified }: { verified: boolean }) {
   return verified ? (
     <Badge variant="success">
-      <ShieldCheck aria-hidden /> MNNIT student
+      <ShieldCheck aria-hidden /> Eligible
     </Badge>
   ) : (
     <Badge variant="warning">

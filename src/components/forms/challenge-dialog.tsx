@@ -76,7 +76,7 @@ export function ChallengeButton({
         title="Finish onboarding and Chess.com verification to play"
       >
         <Link href="/onboarding">
-          <Swords aria-hidden /> Finish verification to challenge
+          <Swords aria-hidden /> Finish setting up to challenge
         </Link>
       </Button>
     );

@@ -1,13 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CalendarDays, Info } from "lucide-react";
-import {
-  CollegeBadge,
-  DemoBadge,
-  RatingBadge,
-  TimeClassBadge,
-  VerifiedChessBadge,
-} from "@/components/chess/badges";
+import { DemoBadge, RatingBadge, TimeClassBadge } from "@/components/chess/badges";
 import { ExternalChessLink } from "@/components/data/leaderboard-table";
 import { MatchesTable } from "@/components/data/matches-table";
 import { EmptyState, SectionTitle, Stat } from "@/components/data/primitives";
@@ -110,10 +104,6 @@ export default async function PlayerPage({ params }: Props) {
               <CalendarDays className="size-3.5" aria-hidden /> Member since{" "}
               {formatDate(profile.created_at)}
             </span>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <CollegeBadge verified />
-            <VerifiedChessBadge verified />
           </div>
           {profile.bio ? (
             <p className="max-w-xl text-sm text-muted-foreground">{profile.bio}</p>
@@ -263,12 +253,15 @@ export default async function PlayerPage({ params }: Props) {
         </Card>
       </section>
 
-      <Alert variant="info" title="How this profile is verified">
-        Student eligibility was confirmed against the club’s approved list
+      <Alert variant="info" title="What is verified on this profile">
+        The college record counts only matches whose result was found in both players’ Chess.com
+        game archives (or confirmed by a moderator). The Chess.com account itself was{" "}
         {link.verification_method === "admin_review"
-          ? ", and Chess.com ownership by an administrator"
-          : ", and Chess.com ownership by a one-time code on the public profile"}
-        . Verified {formatDate(link.verified_at)}.
+          ? "linked by an administrator"
+          : link.verification_method === "self_declared"
+            ? "entered by the member and is not independently verified"
+            : "confirmed by the club"}{" "}
+        on {formatDate(link.verified_at)}.
       </Alert>
     </div>
   );

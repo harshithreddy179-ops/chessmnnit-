@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CollegeBadge, VerifiedChessBadge } from "@/components/chess/badges";
+import { ChessLinkBadge, CollegeBadge } from "@/components/chess/badges";
 import { EmptyState, Pagination } from "@/components/data/primitives";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -128,10 +128,10 @@ export default async function AdminUsers({
                         {l ? (
                           <span className="flex items-center gap-2">
                             <span className="font-mono text-xs">@{l.chess_username}</span>
-                            <VerifiedChessBadge verified />
+                            <ChessLinkBadge linked />
                           </span>
                         ) : (
-                          <VerifiedChessBadge verified={false} />
+                          <ChessLinkBadge linked={false} />
                         )}
                       </TableCell>
                       <TableCell>

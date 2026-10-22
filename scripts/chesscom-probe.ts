@@ -4,15 +4,12 @@
  * This project was built and tested against a local stand-in modelled on Chess.com's
  * documentation, because the build environment could not reach api.chess.com. Run this once
  * from a machine that can, to check that the real responses match what the code expects BEFORE
- * relying on automatic verification and result sync:
+ * relying on result sync:
  *
- *   npm run chesscom:probe -- <username> [YYYY/MM] [--code MNNIT-XXXXXXXX] [--contact you@example.com]
+ *   npm run chesscom:probe -- <username> [YYYY/MM] [--contact you@example.com]
  *
  *   <username>  any public Chess.com account (yours is fine)
  *   YYYY/MM     a month to read the game archive for (default: the current month)
- *   --code      a verification code you have typed into your own Location/Name field, to
- *               confirm the profile-code round trip works (and see how long Chess.com's
- *               cache takes to show an edit)
  *
  * It only makes read-only, documented GET requests, one at a time, with the same User-Agent
  * format as the app. It prints a report and exits non-zero if anything the app relies on is
@@ -21,7 +18,6 @@
 import { ChessComClient, buildUserAgent } from "@/lib/chess/client";
 import { currentMonth, normalizeArchiveGame } from "@/lib/chess/games";
 import { isValidChessUsername, normalizeChessUsername } from "@/lib/chess/username";
-import { profileContainsCode } from "@/lib/chess/verification/profile-code";
 
 const args = process.argv.slice(2);
 const flag = (name: string) => {
@@ -30,7 +26,6 @@ const flag = (name: string) => {
   const [, value] = args.splice(i, 2);
   return value;
 };
-const code = flag("--code");
 const contact = flag("--contact") ?? process.env.CHESSCOM_CONTACT_EMAIL ?? null;
 const [rawUser, rawMonth] = args;
 
@@ -42,9 +37,7 @@ const record = (check: string, ok: boolean, detail: string) => {
 
 async function main() {
   if (!rawUser) {
-    console.error(
-      "Usage: npm run chesscom:probe -- <username> [YYYY/MM] [--code CODE] [--contact EMAIL]",
-    );
+    console.error("Usage: npm run chesscom:probe -- <username> [YYYY/MM] [--contact EMAIL]");
     process.exit(2);
   }
   const username = normalizeChessUsername(rawUser);
@@ -96,21 +89,6 @@ async function main() {
       typeof profile.player_id === "number",
       "",
     );
-    record(
-      "profile exposes 'location' or 'name' (needed by the profile-code check)",
-      "location" in profile || "name" in profile,
-      `location=${JSON.stringify(profile.location ?? null)} name=${JSON.stringify(profile.name ?? null)}`,
-    );
-    if (code) {
-      const seen = profileContainsCode(profile, code);
-      record(
-        "profile-code round trip",
-        seen,
-        seen
-          ? "the code is visible through the public API: automatic verification will work"
-          : "the code is NOT visible yet. Chess.com caches profiles; wait and re-run to measure the delay. If it never appears, set CHESSCOM_PROFILE_CODE_VERIFICATION=false and use administrator review",
-      );
-    }
   } catch (error) {
     record("profile parses with the app's schema", false, String(error));
   }

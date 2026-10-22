@@ -22,7 +22,7 @@ import { getSessionUser } from "@/server/auth";
 import { getLandingData } from "@/server/data/public";
 
 export const metadata = {
-  title: "MNNIT Chess — verified players, college leaderboards, automatic results",
+  title: "MNNIT Chess — college leaderboards and automatically verified results",
   description:
     "Join MNNIT Allahabad's chess community: link your Chess.com account, challenge classmates and climb leaderboards built from verified results.",
 };
@@ -30,13 +30,13 @@ export const metadata = {
 const STEPS = [
   {
     icon: ShieldCheck,
-    title: "Sign in & prove you're a student",
-    body: "Sign in with Google. Your account is matched against the student list kept by the club administrators; if you are not on it you can ask for a manual review.",
+    title: "Sign in with Google",
+    body: "One click, no password. Your email is never shown publicly.",
   },
   {
     icon: BadgeCheck,
-    title: "Prove you own your Chess.com account",
-    body: "You add a one-time code to your Chess.com profile and we read your public profile. Typing a username is never enough.",
+    title: "Add your Chess.com username",
+    body: "Type your Chess.com username and you are in. It is shown on your profile, each account belongs to one member, and an administrator can fix a wrong link.",
   },
   {
     icon: Swords,
@@ -71,9 +71,9 @@ export default async function HomePage() {
               Count real results.
             </h1>
             <p className="max-w-xl text-base text-muted-foreground sm:text-lg">
-              A verified chess community for MNNIT students. Link your Chess.com account, challenge
-              classmates, and see a college leaderboard built only from results we could actually
-              verify.
+              A chess community for MNNIT. Link your Chess.com account, challenge classmates, and
+              see a college leaderboard built only from results we could actually verify from the
+              games on Chess.com.
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild size="lg">
@@ -95,7 +95,7 @@ export default async function HomePage() {
           </div>
           <dl className="grid grid-cols-3 gap-3 lg:grid-cols-1">
             {[
-              ["Verified players", show(summary?.verified_players)],
+              ["Players", show(summary?.verified_players)],
               ["Verified matches", show(summary?.verified_matches)],
               ["Matches, last 30 days", show(summary?.matches_30d)],
             ].map(([label, value]) => (
@@ -153,8 +153,8 @@ export default async function HomePage() {
                   compact
                 />
               ) : (
-                <EmptyState icon={Trophy} title="No verified players yet">
-                  Ratings appear after players verify their Chess.com accounts.
+                <EmptyState icon={Trophy} title="No players yet">
+                  Ratings appear after players link their Chess.com accounts.
                 </EmptyState>
               )}
             </CardContent>
@@ -233,21 +233,23 @@ export default async function HomePage() {
       <section className="grid gap-4 rounded-xl border bg-card p-6 sm:p-8">
         <h2 className="font-display text-3xl">What “verified” means here</h2>
         <p className="max-w-3xl text-sm text-muted-foreground">
-          Four separate facts are tracked, and only players for whom all four are true appear on
-          leaderboards.
+          Only <strong>match results</strong> are verified, and that is the part that decides the
+          college leaderboard.
         </p>
         <ul className="grid gap-3 text-sm sm:grid-cols-2">
           <li>
-            <strong>Google account signed in.</strong> You have logged in; this alone proves nothing
-            about college or chess.
+            <strong>Results are checked against Chess.com.</strong> A college match counts only when
+            the finished game is found in both players’ public Chess.com archives, or a moderator
+            confirms it.
           </li>
           <li>
-            <strong>College eligibility verified.</strong> Your Google email matched the
-            administrators’ student list (or an administrator approved you).
+            <strong>Accounts are entered by the players.</strong> We do not prove who owns a
+            Chess.com account. Each account can belong to only one member, and administrators can
+            correct a wrong link.
           </li>
           <li>
-            <strong>Chess.com ownership verified.</strong> You proved control of the account; a
-            username that merely exists is not enough, and an account can belong to only one member.
+            <strong>Imported ratings are Chess.com’s.</strong> They are not earned against MNNIT
+            students only and are never mixed into the college points and Elo.
           </li>
           <li>
             <strong>Profile complete.</strong> You finished onboarding. Suspended accounts are

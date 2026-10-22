@@ -31,7 +31,7 @@ keys such a player by Chess.com username, so history is stable under deletions.
 
 ## Leaderboards (`get_leaderboard`)
 
-Only approved members (eligible, Chess.com ownership verified, onboarding complete, not suspended) appear. Sorting,
+Only approved members (eligible, Chess.com account linked, onboarding complete, not suspended) appear. Sorting,
 ranking and paging happen in SQL. **Every ordering ends in `(chess_username, user_id)`**, so ties are broken the same
 way every time and ranks never jump between page loads.
 

@@ -1,6 +1,7 @@
 import { ApiError, apiRoute, unwrap } from "@/server/api";
 import { adminActionSchema, type AdminAction } from "@/lib/schemas";
 import { createSupabaseAdminClient } from "@/lib/supabase/server";
+import { parseChessUsername } from "@/lib/chess/username";
 import { getChessClient } from "@/server/chess";
 import { refreshArchives } from "@/server/sync/challenges";
 import { createSupabaseSyncStore } from "@/server/sync/supabase-store";
@@ -48,6 +49,31 @@ async function perform(ctx: AppContext, a: AdminAction): Promise<unknown> {
         await db.rpc("admin_review_claim", {
           p_claim_id: a.claim_id,
           p_approve: a.approve,
+          p_reason: a.reason,
+          p_player_id: playerId,
+        }),
+      );
+    }
+    case "set_chess_link": {
+      const username = parseChessUsername(a.username);
+      if (!username)
+        throw new ApiError(
+          400,
+          "invalid_username",
+          "Enter a valid Chess.com username: 3–25 letters, digits, underscores or hyphens.",
+        );
+      // Best effort: record Chess.com's own player id so renames can be detected later. The
+      // administrator is trusted to know the account; a Chess.com outage must not block a fix.
+      const playerId = await getChessClient()
+        .getProfile(username)
+        .then(
+          (p) => p.player_id,
+          () => undefined,
+        );
+      return unwrap(
+        await db.rpc("admin_set_chess_link", {
+          p_user: a.user_id,
+          p_username: username,
           p_reason: a.reason,
           p_player_id: playerId,
         }),

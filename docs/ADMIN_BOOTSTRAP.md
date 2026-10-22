@@ -35,12 +35,12 @@ Alternative without the script: in the Supabase SQL editor run `select public.bo
 
 ## Roles
 
-| Role               | Can                                                                                                                                                           |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Super admin        | everything below, plus: roles, global settings, adding whole email domains to the eligibility list                                                            |
-| Verification admin | eligibility list and requests, Chess.com ownership claims, account-recovery requests, unlinking, user eligibility, retrying a player's sync, suspending users |
-| Match moderator    | resolving ambiguous / stuck challenges, entering results, correcting or voiding matches, disputes, suspending users                                           |
-| Read-only analyst  | overview, users list, sync and job status, audit log. **Cannot change anything.**                                                                             |
+| Role               | Can                                                                                                                                                                                                |
+| ------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Super admin        | everything below, plus: roles, global settings, adding whole email domains to the eligibility list                                                                                                 |
+| Verification admin | eligibility list and requests, changing or unlinking a player's Chess.com account, account-recovery requests, older ownership claims, user eligibility, retrying a player's sync, suspending users |
+| Match moderator    | resolving ambiguous / stuck challenges, entering results, correcting or voiding matches, disputes, suspending users                                                                                |
+| Read-only analyst  | overview, users list, sync and job status, audit log. **Cannot change anything.**                                                                                                                  |
 
 Enforcement is in the database (`app_private.require_role` inside every privileged function, and RLS on every table).
 The dashboard hides what a role cannot use, but a hand-crafted request is refused by the database regardless — the

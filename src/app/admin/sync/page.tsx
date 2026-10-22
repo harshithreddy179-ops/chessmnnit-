@@ -80,16 +80,6 @@ export default async function AdminSync() {
                 <span>Chess.com contact email (User-Agent)</span>
                 {stateBadge(status.chessApi.state)}
               </p>
-              <p className="flex items-center justify-between gap-3">
-                <span>Profile-code verification</span>
-                <Badge variant={status.chessProfileCode ? "success" : "neutral"}>
-                  {status.chessProfileCode ? "enabled" : "disabled"}
-                </Badge>
-              </p>
-              <p className="flex items-center justify-between gap-3">
-                <span>Chess.com OAuth</span>
-                <Badge variant="warning">awaiting Chess.com approval</Badge>
-              </p>
             </div>
             <p className="text-xs text-muted-foreground">
               Only whether each setting is present is shown, never its value.

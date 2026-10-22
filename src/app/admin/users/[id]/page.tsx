@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminAction } from "@/components/admin/admin-action";
-import { CollegeBadge, VerifiedChessBadge } from "@/components/chess/badges";
+import { SetChessLinkButton } from "@/components/admin/forms";
+import { ChessLinkBadge, CollegeBadge } from "@/components/chess/badges";
 import { SectionTitle, Stat } from "@/components/data/primitives";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +21,13 @@ import { formatDateTime } from "@/lib/utils";
 import { requireAdmin } from "@/server/auth";
 
 export const metadata = { title: "User" };
+
+const LINK_METHOD: Record<string, string> = {
+  self_declared: "entered by the player (not verified)",
+  admin_review: "set by an administrator",
+  profile_code: "confirmed by profile code",
+  oauth: "confirmed via OAuth",
+};
 
 export default async function AdminUser({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -75,7 +83,7 @@ export default async function AdminUser({ params }: { params: Promise<{ id: stri
         ) : null}
         <div className="flex flex-wrap gap-2">
           <CollegeBadge verified={p.eligibility_status === "verified"} />
-          <VerifiedChessBadge verified={Boolean(link.data)} />
+          <ChessLinkBadge linked={Boolean(link.data)} />
           {p.account_status === "suspended" ? <Badge variant="danger">Suspended</Badge> : null}
           {p.is_approved ? (
             <Badge variant="success">Public</Badge>
@@ -128,13 +136,16 @@ export default async function AdminUser({ params }: { params: Promise<{ id: stri
               />
             )
           ) : null}
+          {canVerify ? (
+            <SetChessLinkButton userId={id} current={link.data?.chess_username ?? null} />
+          ) : null}
           {canVerify && link.data ? (
             <AdminAction
               label="Unlink Chess.com"
               variant="destructive"
               payload={{ action: "unlink_account", user_id: id }}
               title={`Unlink @${link.data.chess_username}?`}
-              description="The player loses their public listing until they verify an account again. The link is archived for audit."
+              description="The player loses their public listing until an account is linked again. The link is archived for audit."
               success="Chess.com account unlinked"
             />
           ) : null}
@@ -175,10 +186,11 @@ export default async function AdminUser({ params }: { params: Promise<{ id: stri
           {link.data ? (
             <p>
               @{link.data.chess_username} · player id {link.data.chess_player_id ?? "unknown"} ·{" "}
-              {link.data.verification_method} · verified {formatDateTime(link.data.verified_at)}
+              {LINK_METHOD[link.data.verification_method] ?? link.data.verification_method} · linked{" "}
+              {formatDateTime(link.data.verified_at)}
             </p>
           ) : (
-            <p className="text-muted-foreground">No verified link.</p>
+            <p className="text-muted-foreground">No Chess.com account linked.</p>
           )}
           {claims.data?.length ? (
             <Table className="mt-4">

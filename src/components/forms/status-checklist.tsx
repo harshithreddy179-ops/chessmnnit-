@@ -9,10 +9,10 @@ export interface ChecklistItem {
   detail: string;
 }
 
-/** The four separate verification facts, shown plainly and never conflated. */
+/** The separate facts about an account, shown plainly and never conflated. */
 export function StatusChecklist({ items }: { items: ChecklistItem[] }) {
   return (
-    <ul className="grid gap-3 sm:grid-cols-2" aria-label="Verification status">
+    <ul className="grid gap-3 sm:grid-cols-2" aria-label="Account status">
       {items.map((item) => (
         <li key={item.label} className="flex gap-3 rounded-lg border bg-card p-4">
           {item.state === "done" ? (

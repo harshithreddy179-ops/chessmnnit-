@@ -32,9 +32,9 @@ export function RecoveryForm({ hasOpen }: { hasOpen: boolean }) {
       }}
     >
       <p className="text-sm text-muted-foreground">
-        A verified Chess.com link can’t be edited. If you lost access to a Google account, changed
-        your Chess.com username, or need to move to another account, an administrator has to review
-        it. Approval only removes the old link — you’ll still need to verify the account you want.
+        Your Chess.com link can’t be edited here. If you made a typo, renamed your Chess.com
+        account, or someone linked your username before you, an administrator has to review it.
+        Approval removes the wrong link, and then you add the right username yourself.
       </p>
       <Field id={`${id}-kind`} label="What do you need?">
         {(a) => (
@@ -70,7 +70,7 @@ export function RecoveryForm({ hasOpen }: { hasOpen: boolean }) {
       </Field>
       <Field
         id={`${id}-reason`}
-        label="Why? How can an administrator confirm it’s you?"
+        label="What went wrong? How can an administrator tell the account is yours?"
         hint="At least 10 characters."
         error={error?.fieldError("reason")}
         required

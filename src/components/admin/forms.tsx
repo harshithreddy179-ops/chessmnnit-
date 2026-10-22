@@ -3,6 +3,15 @@
 import { useId, useState } from "react";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Field } from "@/components/ui/field";
 import { Input, Textarea } from "@/components/ui/input";
 import { NativeSelect } from "@/components/ui/native-select";
@@ -243,5 +252,116 @@ export function SettingForm({
         </p>
       ) : null}
     </form>
+  );
+}
+
+/**
+ * Sets or replaces a player's Chess.com account: the one tool for every "something went wrong"
+ * case (a typo, a renamed account, someone who linked another person's username).
+ */
+export function SetChessLinkButton({
+  userId,
+  current,
+}: {
+  userId: string;
+  current: string | null;
+}) {
+  const id = useId();
+  const [open, setOpen] = useState(false);
+  const [username, setUsername] = useState("");
+  const [reason, setReason] = useState("");
+  const { run, busy, error, clearError } = useAction();
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) clearError();
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button variant="outline" size="sm">
+          {current ? "Change Chess.com account" : "Set Chess.com account"}
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <form
+          className="grid gap-4"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            const r = await run("set-link", "/api/admin", {
+              body: { action: "set_chess_link", user_id: userId, username, reason },
+              success: "Chess.com account updated",
+            });
+            if (r) {
+              setOpen(false);
+              setUsername("");
+              setReason("");
+            }
+          }}
+        >
+          <DialogHeader>
+            <DialogTitle>
+              {current ? `Replace @${current}` : "Set the Chess.com account"}
+            </DialogTitle>
+            <DialogDescription>
+              The player’s old link (if any) is archived. If another member currently holds this
+              username, they are unlinked and notified. Both people are told what changed.
+            </DialogDescription>
+          </DialogHeader>
+          <Field
+            id={`${id}-user`}
+            label="Chess.com username"
+            hint="Username or profile link."
+            error={error?.fieldError("username")}
+            required
+          >
+            {(a) => (
+              <Input
+                {...a}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                maxLength={200}
+                required
+              />
+            )}
+          </Field>
+          <Field
+            id={`${id}-reason`}
+            label="Reason"
+            hint="At least 5 characters. Shown to the player and recorded in the audit log."
+            error={error?.fieldError("reason")}
+            required
+          >
+            {(a) => (
+              <Textarea
+                {...a}
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                rows={3}
+                maxLength={500}
+                required
+              />
+            )}
+          </Field>
+          {error && !error.fields.length ? <Alert variant="danger">{error.message}</Alert> : null}
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              loading={busy === "set-link"}
+              disabled={!username.trim() || reason.trim().length < 5}
+            >
+              Save
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 }

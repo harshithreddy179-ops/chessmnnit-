@@ -91,21 +91,19 @@ redirect URI. **(unverified: config.toml was written from the CLI reference and 
 2. **Environment variables** (Project → Settings → Environment Variables; set for Production and, if you use
    previews, Preview). All are documented in `.env.example`:
 
-   | Variable                                | Required?   | Scope   | Purpose                                                                                                                                                |
-   | --------------------------------------- | ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-   | `NEXT_PUBLIC_APP_URL`                   | yes         | browser | Public origin, e.g. `https://chess.mnnit.example`. Used for redirects, canonical URLs, the Chess.com User-Agent.                                       |
-   | `NEXT_PUBLIC_SUPABASE_URL`              | yes         | browser | Supabase project URL.                                                                                                                                  |
-   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`  | yes         | browser | Publishable key (or legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Safe in browsers; RLS protects the data.                                                  |
-   | `SUPABASE_SECRET_KEY`                   | yes         | server  | Secret key (or legacy `SUPABASE_SERVICE_ROLE_KEY`). Bypasses RLS. Used by scheduled jobs, Chess.com link confirmation, Auth bans and account deletion. |
-   | `CRON_SECRET`                           | yes         | server  | ≥ 24 random characters (`openssl rand -hex 32`). Protects `/api/cron/*`. Vercel Cron sends it automatically.                                           |
-   | `CHESSCOM_CONTACT_EMAIL`                | recommended | server  | Put in the User-Agent so Chess.com can contact you. Use a monitored inbox.                                                                             |
-   | `CHESSCOM_PROFILE_CODE_VERIFICATION`    | no          | server  | `true` (default) or `false` to disable the profile-code ownership check (see [CHESSCOM_INTEGRATION.md](CHESSCOM_INTEGRATION.md)).                      |
-   | `CHESSCOM_MIN_REQUEST_INTERVAL_MS`      | no          | server  | Gap between Chess.com requests, default 400.                                                                                                           |
-   | `CHESSCOM_REQUEST_TIMEOUT_MS`           | no          | server  | Per-request timeout, default 10000.                                                                                                                    |
-   | `CHESSCOM_MAX_RETRIES`                  | no          | server  | Retries with exponential backoff, default 3.                                                                                                           |
-   | `CHESSCOM_OAUTH_CLIENT_ID` / `…_SECRET` | no          | server  | Only reported in the admin UI; OAuth is **not implemented** (needs Chess.com approval).                                                                |
-   | `PUBLIC_DATA_REVALIDATE_SECONDS`        | no          | server  | Cache lifetime of landing-page data, default 60.                                                                                                       |
-   | `CHESSCOM_API_BASE_URL`                 | **never**   | server  | Test-only override of the Chess.com host. Leave unset in production.                                                                                   |
+   | Variable                               | Required?   | Scope   | Purpose                                                                                                                                                |
+   | -------------------------------------- | ----------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+   | `NEXT_PUBLIC_APP_URL`                  | yes         | browser | Public origin, e.g. `https://chess.mnnit.example`. Used for redirects, canonical URLs, the Chess.com User-Agent.                                       |
+   | `NEXT_PUBLIC_SUPABASE_URL`             | yes         | browser | Supabase project URL.                                                                                                                                  |
+   | `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | yes         | browser | Publishable key (or legacy `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Safe in browsers; RLS protects the data.                                                  |
+   | `SUPABASE_SECRET_KEY`                  | yes         | server  | Secret key (or legacy `SUPABASE_SERVICE_ROLE_KEY`). Bypasses RLS. Used by scheduled jobs, Chess.com link confirmation, Auth bans and account deletion. |
+   | `CRON_SECRET`                          | yes         | server  | ≥ 24 random characters (`openssl rand -hex 32`). Protects `/api/cron/*`. Vercel Cron sends it automatically.                                           |
+   | `CHESSCOM_CONTACT_EMAIL`               | recommended | server  | Put in the User-Agent so Chess.com can contact you. Use a monitored inbox.                                                                             |
+   | `CHESSCOM_MIN_REQUEST_INTERVAL_MS`     | no          | server  | Gap between Chess.com requests, default 400.                                                                                                           |
+   | `CHESSCOM_REQUEST_TIMEOUT_MS`          | no          | server  | Per-request timeout, default 10000.                                                                                                                    |
+   | `CHESSCOM_MAX_RETRIES`                 | no          | server  | Retries with exponential backoff, default 3.                                                                                                           |
+   | `PUBLIC_DATA_REVALIDATE_SECONDS`       | no          | server  | Cache lifetime of landing-page data, default 60.                                                                                                       |
+   | `CHESSCOM_API_BASE_URL`                | **never**   | server  | Test-only override of the Chess.com host. Leave unset in production.                                                                                   |
 
    Only the three `NEXT_PUBLIC_*` variables reach the browser. The build succeeds with **none** of these set
    (CI builds that way on purpose); the site then shows "awaiting configuration" states.
@@ -127,7 +125,9 @@ Nobody is an admin until you create one, deliberately, from outside the web app:
 1. Sign in once with the Google account that should own the site.
 2. Run `npm run admin:bootstrap -- you@example.com` locally with `NEXT_PUBLIC_SUPABASE_URL` and
    `SUPABASE_SECRET_KEY` in `.env.local` (full steps and what it does: [ADMIN_BOOTSTRAP.md](ADMIN_BOOTSTRAP.md)).
-3. Open `/admin`. Then add the student list at **Admin → Eligibility list** and grant other roles at **Admin → Admins**.
+3. Open `/admin`. Grant other roles at **Admin → Admins**. Sign-up is open to every Google account by default; to
+   restrict it to a student list, turn on `require_student_eligibility` at **Admin → Settings** and add the list at
+   **Admin → Eligibility list** (it applies to accounts created afterwards).
 
 ---
 
@@ -166,12 +166,13 @@ ones.
 ## 6. Post-deploy checklist
 
 - [ ] `/login` → "Continue with Google" completes and returns to `/onboarding`.
-- [ ] A non-listed email sees "isn't on the approved student list yet" and can request review; a listed email is verified automatically.
-- [ ] Admin → Eligibility list: add a test email; sign in with it; confirm it becomes verified.
+- [ ] A new Google account reaches "Add your Chess.com username", links it and can finish registration.
+- [ ] Admin → Users → that player → **Change Chess.com account** replaces the link and the player is notified.
+- [ ] (Only if you turn on `require_student_eligibility`) a non-listed email sees "isn't on the approved student list yet"
+      and can request review; a listed email is verified automatically.
 - [ ] Run `npm run chesscom:probe -- <a-real-chess-com-username>` from a machine with internet access and keep the output
-      (see [CHESSCOM_INTEGRATION.md](CHESSCOM_INTEGRATION.md)). If the profile-code check fails, set
-      `CHESSCOM_PROFILE_CODE_VERIFICATION=false` and use administrator review.
-- [ ] Two real accounts: verify, challenge, accept, play a game on Chess.com, then run the cron call and watch the challenge
+      (see [CHESSCOM_INTEGRATION.md](CHESSCOM_INTEGRATION.md)).
+- [ ] Two real accounts: link, challenge, accept, play a game on Chess.com, then run the cron call and watch the challenge
       move to **Result verified** (allow the settle window — default 60 min — and Chess.com's data lag).
 - [ ] Presence: open the site in two browsers signed in as different members; each should see the other **Available**
       within a few seconds, and **offline** shortly after closing the tab.

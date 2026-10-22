@@ -34,8 +34,7 @@ export const profileUpdateSchema = z.object({
 export const presenceSchema = z.object({ presence_mode: presenceMode });
 
 export const chessUsernameInput = z.string().min(1, "Enter your Chess.com username").max(200);
-export const claimStartSchema = z.object({ username: chessUsernameInput });
-export const claimReviewSchema = z.object({ note: text(10, 1000, "Note") });
+export const chessLinkSchema = z.object({ username: chessUsernameInput });
 
 export const eligibilityRequestSchema = z.object({
   identifier: text(3, 120, "Roll number or college email"),
@@ -90,6 +89,12 @@ const DOMAIN_SHAPE = /^[a-z0-9.-]+\.[a-z]{2,}$/;
 export const adminActionSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("review_claim"), claim_id: uuid, approve: z.boolean(), reason }),
   z.object({ action: z.literal("unlink_account"), user_id: uuid, reason }),
+  z.object({
+    action: z.literal("set_chess_link"),
+    user_id: uuid,
+    username: chessUsernameInput,
+    reason,
+  }),
   z.object({
     action: z.literal("resolve_recovery"),
     request_id: uuid,

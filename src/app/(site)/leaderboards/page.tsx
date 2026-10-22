@@ -50,7 +50,7 @@ export default async function LeaderboardsPage({
     <div className="grid gap-8">
       <PageHeader
         title="Leaderboards"
-        description="Only students with verified eligibility and a verified Chess.com account are ranked. Ties are broken deterministically."
+        description="Members who have linked a Chess.com account and finished onboarding are ranked. Ties are broken deterministically."
       />
 
       <nav
@@ -113,7 +113,7 @@ export default async function LeaderboardsPage({
       ) : result.rows.length === 0 ? (
         <EmptyState icon={Trophy} title="Nobody is ranked here yet">
           {def.needsClass
-            ? `No verified player has a ${TIME_CLASS_LABEL[timeClass].toLowerCase()} rating imported yet.`
+            ? `No player has a ${TIME_CLASS_LABEL[timeClass].toLowerCase()} rating imported yet.`
             : "This board fills in as verified college matches are recorded."}
         </EmptyState>
       ) : (

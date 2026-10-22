@@ -12,14 +12,13 @@ Next.js (App Router) · TypeScript (strict) · React 19 · Tailwind CSS 4 · Rad
 
 ## What it does
 
-- **Four separate facts per student**, each shown in an onboarding checklist and enforced independently:
-  1. signed in with Google;
-  2. **college eligibility verified** (the verified Google email is on an admin-managed list, or an administrator approved a review request);
-  3. **Chess.com ownership verified** (one-time code in the public profile, or administrator review);
-  4. profile complete.
-     Only students with all four are public.
-- **One-to-one Chess.com ownership** enforced by the database: an account belongs to one member and a member has one account,
-  even under concurrent requests; claims reserve nothing; changes go through audited, admin-reviewed recovery.
+- **Simple sign-up**: sign in with Google, type your Chess.com username, finish a short profile. There is no student
+  list and no ownership proof by default. The link is recorded as **self-declared** and the UI never calls it verified;
+  only match results are verified. Administrators can replace any link at any time (audited, both people notified).
+  An optional setting (`require_student_eligibility`) brings back the admin-managed student list for new accounts.
+- **One-to-one Chess.com link** enforced by the database: an account belongs to one member and a member has one account,
+  even under concurrent requests; changes go through the administrators (a direct "change account" action, or the
+  player's recovery request).
 - **Player directory, profiles, leaderboards** (Chess.com rating per category — never combined — and college points,
   wins, Elo, games, win rate with a minimum sample, activity), **match history**, deterministic tie-breakers, server-side sorting.
 - **Live presence** (available / busy / invisible, multi-tab, reconnect-safe, never stored) and **notifications**.
@@ -41,7 +40,6 @@ Next.js (App Router) · TypeScript (strict) · React 19 · Tailwind CSS 4 · Rad
 | Supabase project, Google OAuth, Vercel, env vars, cron        | **You configure** — step by step in [DEPLOYMENT.md](docs/DEPLOYMENT.md). Not done in this repository.                                             |
 | First administrator                                           | **You run one command** — [ADMIN_BOOTSTRAP.md](docs/ADMIN_BOOTSTRAP.md)                                                                           |
 | Live Chess.com API                                            | **Written to the documentation, not yet confirmed live** — run `npm run chesscom:probe` ([CHESSCOM_INTEGRATION.md](docs/CHESSCOM_INTEGRATION.md)) |
-| Chess.com OAuth                                               | **Pending Chess.com approval; deliberately not implemented** (no invented endpoints)                                                              |
 | Realtime (presence, live notifications) against a real server | **Implemented, not tested live** — verify with two browsers after deploying                                                                       |
 
 ## Quick start (local)
@@ -82,7 +80,7 @@ npm run db:local -- --reset --seed  # LOCAL_DATABASE_URL, default postgres://pos
 
 - [Deployment](docs/DEPLOYMENT.md) — Supabase, Google OAuth, Vercel, environment variables, scheduled jobs, checklist
 - [Architecture](docs/ARCHITECTURE.md) — data model, security model, presence, jobs
-- [Chess.com integration](docs/CHESSCOM_INTEGRATION.md) — endpoints, ownership proof, result matching, limits, pending OAuth
+- [Chess.com integration](docs/CHESSCOM_INTEGRATION.md) — endpoints, account linking, result matching, limits
 - [Scoring](docs/SCORING.md) — points, win rate, Elo, leaderboards, settings
 - [Admin bootstrap and roles](docs/ADMIN_BOOTSTRAP.md)
 - [Testing](docs/TESTING.md) — what each layer proves and what it does not
@@ -93,12 +91,12 @@ npm run db:local -- --reset --seed  # LOCAL_DATABASE_URL, default postgres://pos
 These are real, not boilerplate:
 
 1. **The Chess.com API was never reached during development** (the build environment blocked it). Behaviour is tested
-   against a stand-in modelled on the documentation. The profile-code ownership check depends on Chess.com's public
-   profile returning the edited Location/Name field, and the result-code mapping was written from the documentation;
-   confirm both with `npm run chesscom:probe`. Administrator-review verification works regardless.
-2. **Chess.com publishes data through a cache.** Verification and match results can lag by minutes to hours; the UI
+   against a stand-in modelled on the documentation. The result-code mapping was written from the documentation;
+   confirm it with `npm run chesscom:probe`.
+2. **Chess.com accounts are not proven to belong to the member.** Whoever types a username first gets it. Real
+   players are protected only by administrators noticing and fixing it (Admin → Users → Change Chess.com account).
+3. **Chess.com publishes data through a cache.** Match results can lag by minutes to hours; the UI
    says so and the matcher is built to wait rather than guess.
-3. **Chess.com OAuth is not implemented** (needs Chess.com's approval and documented endpoints).
 4. **Realtime was not tested against a live server.** Presence logic is unit-tested; channel authorisation and
    reconnection behaviour need a manual check after deploying. Without Realtime the site works and shows presence as
    unavailable.

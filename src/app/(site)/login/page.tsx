@@ -22,8 +22,7 @@ export default async function LoginPage({
           {one(sp.join) ? "Join MNNIT Chess" : "Welcome back"}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Sign in with Google. You will then confirm you are an MNNIT student and link your
-          Chess.com account.
+          Sign in with Google, then add your Chess.com username. That’s it.
         </p>
       </div>
       <LoginPanel configured={isSupabaseConfigured()} next={one(sp.next)} />

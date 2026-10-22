@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { createTestDb, sqlError, type Player, type TestDb } from "./helpers";
 
 let db: TestDb;
@@ -556,7 +556,13 @@ describe("role management and audit trail", () => {
 });
 
 describe("eligibility, suspension and settings administration", () => {
+  // Two tests here exercise the gated mode; never let it leak into the next test.
+  afterEach(async () => {
+    await db.requireEligibility(false);
+  });
+
   it("manages the allowlist with audit entries; domain rules are super-admin only", async () => {
+    await db.requireEligibility(true);
     const auditCount = () =>
       count(
         "select count(*)::int as n from public.audit_logs where action in ('eligibility.entries_added', 'eligibility.entry_revoked')",
@@ -611,6 +617,7 @@ describe("eligibility, suspension and settings administration", () => {
   });
 
   it("reviews eligibility requests from students who are not on the list", async () => {
+    await db.requireEligibility(true);
     const student = await db.createUser({ email: "unlisted@gmail.example.test" });
     const req = await db
       .as(student.id)

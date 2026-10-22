@@ -84,6 +84,8 @@ describe("structural guarantees (these fail if a future migration regresses)", (
       "admin_update_setting",
       "admin_overview",
       "admin_retry_player_sync",
+      "link_my_chess_account",
+      "admin_set_chess_link",
     ]);
 
     const unexpectedAnon = rows

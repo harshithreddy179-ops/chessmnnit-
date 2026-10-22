@@ -59,7 +59,7 @@ export default async function PlayersPage({
     <div className="grid gap-8">
       <PageHeader
         title="Players"
-        description="Verified MNNIT students. Ratings are imported from Chess.com for the category you choose; college results come only from verified matches."
+        description="MNNIT chess players. Ratings are imported from Chess.com for the category you choose; college results come only from verified matches."
       />
 
       <form
@@ -222,7 +222,7 @@ async function Results({
       ) : directory.rows.length === 0 ? (
         <EmptyState
           icon={Users}
-          title={filtered ? "No players match those filters" : "No verified players yet"}
+          title={filtered ? "No players match those filters" : "No players yet"}
           action={
             filtered ? (
               <Button asChild variant="outline">
@@ -233,7 +233,7 @@ async function Results({
         >
           {filtered
             ? "Try widening the rating range or removing a filter."
-            : "Players appear here after they verify their student status and Chess.com account."}
+            : "Players appear here after they sign in and link their Chess.com account."}
         </EmptyState>
       ) : (
         <>

@@ -6,6 +6,9 @@ import { createTestDb, sqlError, type TestDb } from "./helpers";
 let db: TestDb;
 beforeAll(async () => {
   db = await createTestDb();
+  // This file covers the gated mode: accounts start unverified and must match the student list.
+  // Open registration (the default) is covered in open-registration.test.ts.
+  await db.requireEligibility(true);
 });
 afterAll(async () => {
   await db.close();

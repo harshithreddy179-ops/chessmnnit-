@@ -53,7 +53,7 @@ test.describe("public pages with real data", () => {
     await page.goto("/");
     await expect(page.getByRole("heading", { name: /Play real games/ })).toBeVisible();
     const stats = page.locator("dl").first();
-    await expect(stats).toContainText("Verified players");
+    await expect(stats).toContainText("Players");
     // The landing data is cached briefly by design; poll (with reloads) until it reflects the seeded rows.
     await expect(async () => {
       await page.reload();
@@ -95,8 +95,12 @@ test.describe("public pages with real data", () => {
   }) => {
     await page.goto("/players/pub_alice");
     await expect(page.getByRole("heading", { name: "Alice Anand" })).toBeVisible();
-    await expect(page.getByText("MNNIT student", { exact: true })).toBeVisible();
-    await expect(page.getByText("Chess.com verified", { exact: true })).toBeVisible();
+    // Honest about what is and is not verified: the account is the player's own entry.
+    await expect(page.getByText("What is verified on this profile")).toBeVisible();
+    await expect(
+      page.getByText(/entered by the member and is not independently verified/),
+    ).toBeVisible();
+    await expect(page.getByText("MNNIT student", { exact: true })).toHaveCount(0);
     await expect(
       page.getByText("not earned exclusively against MNNIT students").first(),
     ).toBeVisible();
@@ -134,7 +138,7 @@ test.describe("public pages with real data", () => {
     await expect(page.getByText("Nobody is ranked here yet").first()).toBeVisible(); // categories are never merged
     await page.goto("/leaderboards?board=win_rate");
     await expect(page.getByRole("heading", { name: "Win rate" })).toBeVisible();
-    await expect(page.getByText(/at least 5 games/)).toBeVisible();
+    await expect(page.getByText(/at least 5 games/).first()).toBeVisible();
   });
 
   test("match history lists verified matches with links to the games", async ({ page }) => {

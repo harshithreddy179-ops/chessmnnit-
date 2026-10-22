@@ -240,6 +240,11 @@ test.describe("administration: who may do what", () => {
 });
 
 test.describe("administration: eligibility and account control", () => {
+  // The student list only matters when it is required; never leave that switched on for other specs.
+  test.afterEach(async ({ db }) => {
+    await db.requireEligibility(false);
+  });
+
   test("adding an email to the list makes that student eligible; suspending hides a player until reinstated", async ({
     db,
     player,
@@ -248,6 +253,7 @@ test.describe("administration: eligibility and account control", () => {
   }) => {
     const verifier = await db.createUser({ name: "Vera Verifier" });
     await db.makeAdmin(verifier.id, "verification_admin");
+    await db.requireEligibility(true);
     const student = await db.createUser({ name: "Stu Dent" });
     const adminPage = await pageAs(verifier);
 
@@ -678,6 +684,5 @@ test.describe("administration: settings and job visibility", () => {
     expect(run.status()).toBe(200);
     await page.goto("/admin/sync");
     await expect(page.getByText("housekeeping").first()).toBeVisible();
-    await expect(page.getByText("awaiting Chess.com approval")).toBeVisible(); // OAuth is reported honestly as not available
   });
 });

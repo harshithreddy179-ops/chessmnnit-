@@ -59,7 +59,7 @@ export function DirectoryTable({
         <p className="text-xs text-muted-foreground">Sign in to see who is online right now.</p>
       )}
       <Table>
-        <caption className="sr-only">Verified MNNIT players</caption>
+        <caption className="sr-only">MNNIT players</caption>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
             <TableHead>Player</TableHead>

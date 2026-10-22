@@ -21,7 +21,7 @@ export default function PrivacyPage() {
           <h2>What is public</h2>
           <ul>
             <li>
-              Once you are verified: your <strong>display name</strong>, short bio, preferred time
+              Once you have joined: your <strong>display name</strong>, short bio, preferred time
               controls, your <strong>Chess.com username</strong>, your imported Chess.com ratings,
               and your college matches (players, result and a link to the game on Chess.com).
             </li>
@@ -36,17 +36,18 @@ export default function PrivacyPage() {
           <h2>What is private</h2>
           <ul>
             <li>
-              Your <strong>Google email</strong> is used to check that you are on the approved
-              student list. It is never shown on the site. Only administrators who verify students
-              can see it.
+              Your <strong>Google email</strong> is used to sign you in. If the club requires a
+              student list, it is also checked against that list. It is never shown on the site.
+              Only administrators who manage members can see it.
             </li>
             <li>
-              Any roll number or note you type into a review request is visible only to you and the
-              verification administrators.
+              If the club requires a student list, any roll number or note you type into a review
+              request is visible only to you and the administrators who manage members.
             </li>
             <li>
-              We never ask for your Chess.com password. Verifying ownership only reads your public
-              Chess.com profile.
+              We never ask for your Chess.com password. We only read your public Chess.com profile
+              and games. The username you enter is not proven to be yours, and administrators can
+              change it if it is wrong.
             </li>
           </ul>
         </section>

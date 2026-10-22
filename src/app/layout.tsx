@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(getAppUrl()),
   title: { default: `${SITE.name} — ${SITE.tagline}`, template: `%s · ${SITE.name}` },
   description:
-    "The chess community of MNNIT Allahabad: verified Chess.com players, college leaderboards, challenges and automatically verified match results.",
+    "The chess community of MNNIT Allahabad: Chess.com players, college leaderboards, challenges and automatically verified match results.",
   applicationName: SITE.name,
   openGraph: {
     type: "website",
